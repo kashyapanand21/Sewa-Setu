@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sewa Setu</title>
+  <title>Sewa Setu – Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -12,23 +12,29 @@
       margin: 0;
       padding: 0;
     }
-
     .container {
-      max-width: 600px;
-      margin: 100px auto;
-      background: #ffffff;
+      max-width: 400px;
+      margin: 120px auto;
+      background: #fff;
       padding: 30px;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       text-align: center;
     }
-
-    h1 {
-      margin-bottom: 10px;
+    button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background: #4285F4;
+      color: white;
+      font-weight: bold;
+      width: 100%;
     }
-
-    p {
-      color: #555;
+    button:hover {
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -36,18 +42,27 @@
 <body>
   <div class="container">
     <h1>Sewa Setu</h1>
-    <p>Hyperlocal bulk-service coordination platform</p>
-    <p id="status">Initializing Firebase...</p>
+    <p>Login with your Google account</p>
+    <button id="loginBtn">Login with Google</button>
+    <p id="status"></p>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
-    // 1. Import Firebase SDKs from CDN
+    // Import Firebase modules from CDN
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 2. Firebase configuration (PASTE YOUR OWN VALUES)
+    // Your real Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDCrA4oDRB-Lw1Xo9t6qzzSo_mKrFuYnOg",
       authDomain: "sewa-setu-14537.firebaseapp.com",
@@ -57,33 +72,57 @@
       appId: "1:719366428138:web:c8d88e1caa091a50b2ce93"
     };
 
-    // 3. Initialize Firebase
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-    console.log("Firebase initialized successfully");
+    // Expose to window for debugging & inspection
+    window.auth = auth;
+    window.db = db;
+    window.app = app;
 
-    document.getElementById("status").innerText =
-      "Firebase connected successfully.";
+    // Log exports to confirm script ran
+    console.log("Auth exported to window:", window.auth);
+    console.log("Firestore exported to window:", window.db);
 
-    // 4. TEMPORARY TEST: Firestore write (REMOVE after verification)
-    async function testFirestore() {
+    const loginBtn = document.getElementById("loginBtn");
+    const statusText = document.getElementById("status");
+
+    // Login logic
+    loginBtn.addEventListener("click", async () => {
+      statusText.innerText = "Opening Google login...";
       try {
-        const docRef = await addDoc(collection(db, "test"), {
-          message: "Firestore is working",
-          createdAt: new Date()
-        });
-        console.log("Test document created with ID:", docRef.id);
-      } catch (error) {
-        console.error("Firestore test failed:", error);
-        document.getElementById("status").innerText =
-          "Firestore connection failed. Check console.";
-      }
-    }
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
 
-    // COMMENT THIS OUT AFTER SUCCESSFUL TEST
-    // testFirestore();
+        // Write user to Firestore
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          lastLogin: new Date()
+        }, { merge: true });
+
+        console.log("Firestore write triggered for UID:", user.uid);
+        statusText.innerText = "Login successful. Redirecting...";
+        window.location.href = "dashboard.html";
+
+      } catch (error) {
+        console.error("Login error:", error);
+        statusText.innerText = "Login failed. See console.";
+      }
+    });
+
+    // Auto-redirect if already logged in
+    onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("Logged in user detected:", user.uid);
+    document.getElementById("status").innerText = "Logged in. Firestore write should trigger now.";
+  }
+});
+
   </script>
 </body>
 </html>

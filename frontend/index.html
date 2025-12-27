@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Sewa Setu – Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script type="module" src="firebase.js"></script>
 
   <style>
     body {
@@ -11,118 +12,100 @@
       background: #f5f5f5;
       margin: 0;
       padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
     .container {
+      width: 90%;
       max-width: 400px;
-      margin: 120px auto;
-      background: #fff;
-      padding: 30px;
+      background: white;
+      padding: 25px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       text-align: center;
     }
     button {
-      margin-top: 20px;
-      padding: 12px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
+      width: 100%;
+      padding: 12px;
       background: #4285F4;
       color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
       font-weight: bold;
-      width: 100%;
+      cursor: pointer;
+      margin-top: 15px;
     }
-    button:hover {
-      opacity: 0.9;
-    }
+    button:hover { opacity: 0.9; }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <h1>Sewa Setu</h1>
-    <p>Login with your Google account</p>
+    <h2>Sewa Setu</h2>
+    <p>Login using Google</p>
     <button id="loginBtn">Login with Google</button>
     <p id="status"></p>
   </div>
-
   <script type="module">
-    // Import Firebase modules from CDN
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-      getAuth, 
-      GoogleAuthProvider, 
-      signInWithPopup, 
-      onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { 
-      getFirestore, 
-      doc, 
-      setDoc 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithPopup,
+    browserPopupRedirectResolver,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { 
+    getFirestore, 
+    doc, 
+    setDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Your real Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDCrA4oDRB-Lw1Xo9t6qzzSo_mKrFuYnOg",
-      authDomain: "sewa-setu-14537.firebaseapp.com",
-      projectId: "sewa-setu-14537",
-      storageBucket: "sewa-setu-14537.firebasestorage.app",
-      messagingSenderId: "719366428138",
-      appId: "1:719366428138:web:c8d88e1caa091a50b2ce93"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyDCrA4oDRB-Lw1Xo9t6qzzSo_mKrFuYnOg",
+    authDomain: "sewa-setu-14537.firebaseapp.com",
+    projectId: "sewa-setu-14537",
+    storageBucket: "sewa-setu-14537.firebasestorage.app",
+    messagingSenderId: "719366428138",
+    appId: "1:719366428138:web:c8d88e1caa091a50b2ce93"
+  };
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app, browserPopupRedirectResolver); // ✔ popup resolver injected
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
 
-    // Expose to window for debugging & inspection
-    window.auth = auth;
-    window.db = db;
-    window.app = app;
+  window.auth = auth;
+  window.firestoreDB = db;
 
-    // Log exports to confirm script ran
-    console.log("Auth exported to window:", window.auth);
-    console.log("Firestore exported to window:", window.db);
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
+      const user = result.user;
 
-    const loginBtn = document.getElementById("loginBtn");
-    const statusText = document.getElementById("status");
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: user.displayName,
+        email: user.email,
+        lastLogin: new Date()
+      }, { merge: true });
 
-    // Login logic
-    loginBtn.addEventListener("click", async () => {
-      statusText.innerText = "Opening Google login...";
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
+      console.log("Login + Firestore write OK ✔ UID:", user.uid);
+      window.location.href = "dashboard.html";
 
-        // Write user to Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          lastLogin: new Date()
-        }, { merge: true });
+    } catch (e) {
+      console.error("Login failed:", e);
+      document.getElementById("status").innerText = "Login failed.";
+    }
+  });
 
-        console.log("Firestore write triggered for UID:", user.uid);
-        statusText.innerText = "Login successful. Redirecting...";
-        window.location.href = "dashboard.html";
+  onAuthStateChanged(auth, (user) => {
+    window.currentUser = user;
+  });
+</script>
 
-      } catch (error) {
-        console.error("Login error:", error);
-        statusText.innerText = "Login failed. See console.";
-      }
-    });
-
-    // Auto-redirect if already logged in
-    onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("Logged in user detected:", user.uid);
-    document.getElementById("status").innerText = "Logged in. Firestore write should trigger now.";
-  }
-});
-
-  </script>
 </body>
 </html>

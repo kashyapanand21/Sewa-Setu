@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sewa Setu – Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script type="module" src="firebase.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+.order-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,0.05); }
+button { width:100%; padding:10px; margin-top:8px; cursor:pointer; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; }
+button:hover { opacity:0.9; }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>Admin Panel – Group Orders</h2>
+  <div id="adminOrdersList">Loading orders...</div>
+</div>
+
+<script type="module">
+import { collection, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// Auth gate for admin
+onAuthStateChanged(window.auth, (user) => {
+  if (!user) {
+    alert("Not logged in ❌ Redirecting...");
+    window.location.href = "index.html";
+  } else {
+    console.log("Admin authenticated ✔ UID:", user.uid);
+  }
+});
+
+// Live render of group orders
+onSnapshot(collection(window.firestoreDB, "groupOrders"), (snap) => {
+  const list = document.getElementById("adminOrdersList");
+  list.innerHTML = "";
+
+  if (snap.empty) {
+    list.innerText = "No orders yet.";
+    return;
+  }
+
+  snap.forEach(d => {
+    const o = d.data();
+    const id = d.id;
+    list.innerHTML += `
+      <div class="order-item">
+        <b>${o.bookName}</b><br/>
+        Buyers: ${o.currentQuantity}/${o.targetQuantity}<br/>
+        Status: ${o.status}<br/>
+        Deadline: ${o.deadline.toDate().toLocaleString()}<br/>
+        <button onclick="confirmVendor('${id}')">Confirm Vendor</button>
+        <button onclick="markCompleted('${id}')">Mark Completed</button>
+      </div><hr/>
+    `;
+  });
+});
+
+// Admin action functions
+window.confirmVendor = async function(id) {
+  try {
+    await updateDoc(doc(window.firestoreDB, "groupOrders", id), { status: "confirmed", status: "threshold reached" });
+    alert("Vendor confirmed ✔");
+  } catch (e) { console.error(e); }
+};
+
+window.markCompleted = async function(id) {
+  try {
+    await updateDoc(doc(window.firestoreDB, "groupOrders", id), { status: "completed" });
+    alert("Order completed ✔");
+  } catch (e) { console.error(e); }
+};
+</script>
+
+</body>
+</html>

@@ -1,42 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Sewa Setu – Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>Sewa Setu – Dashboard (Diagnostic)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; }
+input { width:100%; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:6px; box-sizing: border-box; }
+button { width:100%; padding:12px; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:15px; }
+button:hover { opacity:0.9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.order-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,0.05); }
+.progress { background:#ddd; height:6px; border-radius:3px; margin-top:6px; }
+.bar { height:6px; width:0%; border-radius:3px; background:#4285F4; transition: width 0.3s; }
+.user-info { background: #e8f0fe; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
+.debug-box { background: #fff3cd; border: 2px solid #ffc107; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-family: monospace; font-size: 12px; }
+.debug-item { padding: 5px; border-bottom: 1px solid #ddd; }
+.debug-item:last-child { border-bottom: none; }
+.status-ok { color: green; }
+.status-error { color: red; }
+</style>
 </head>
-
 <body>
-  <h2>Dashboard</h2>
-  <p>You are logged in.</p>
-  <button id="logoutBtn">Logout</button>
+<div class="debug-box" id="debugBox">
+  <strong>🔍 System Diagnostic:</strong>
+  <div id="debugOutput">Checking...</div>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<div class="user-info" id="userInfo">Checking authentication...</div>
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDCrA4oDRB-Lw1Xo9t6qzzSo_mKrFuYnOg",
-        authDomain: "sewa-setu-14537.firebaseapp.com",
-        projectId: "sewa-setu-14537",
-        storageBucket: "sewa-setu-14537.firebasestorage.app",
-        messagingSenderId: "719366428138",
-        appId: "1:719366428138:web:c8d88e1caa091a50b2ce93"
-    };
+<div class="card">
+  <h3>Create Bulk Book Order</h3>
+  <input id="bookName" placeholder="Enter technical book name" />
+  <input id="targetQty" type="number" placeholder="Minimum students required" min="2" />
+  <input id="deadline" type="datetime-local" />
+  <button id="createOrderBtn" disabled>Create Group Order</button>
+  <div id="buttonStatus" style="margin-top:10px; color:#666; font-size:14px;">Button disabled: Waiting for authentication...</div>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+<div class="card">
+  <h3>Active Group Orders</h3>
+  <div id="ordersList">Waiting for orders...</div>
+</div>
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
+<!-- Load Firebase FIRST, then run our script -->
+<script type="module" src="firebase.js"></script>
+
+<script type="module">
+import { collection, addDoc, onSnapshot, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const debugOutput = document.getElementById("debugOutput");
+const buttonStatus = document.getElementById("buttonStatus");
+
+function addDebug(message, isOk = true) {
+  const div = document.createElement("div");
+  div.className = `debug-item ${isOk ? 'status-ok' : 'status-error'}`;
+  div.textContent = message;
+  debugOutput.appendChild(div);
+  console.log(message);
+}
+
+// Give Firebase 1 second to load
+setTimeout(() => {
+  addDebug("⏰ Checking Firebase objects...");
+  
+  // Check what's available
+  addDebug(`window.auth exists: ${!!window.auth}`);
+  addDebug(`window.db exists: ${!!window.db}`);
+  addDebug(`window.provider exists: ${!!window.provider}`);
+  
+  if (!window.auth) {
+    addDebug("❌ ERROR: window.auth is undefined!", false);
+    addDebug("Check if firebase.js is loading correctly", false);
+    buttonStatus.textContent = "Button disabled: Firebase auth not loaded";
+    return;
+  }
+  
+  if (!window.db) {
+    addDebug("❌ ERROR: window.db is undefined!", false);
+    addDebug("Check if firebase.js is loading correctly", false);
+    buttonStatus.textContent = "Button disabled: Firebase database not loaded";
+    return;
+  }
+  
+  addDebug("✅ Firebase objects loaded successfully");
+  
+  let currentUser = null;
+  
+  // Setup auth listener
+  onAuthStateChanged(window.auth, (user) => {
+    if (!user) {
+      addDebug("❌ No user logged in - redirecting...", false);
+      buttonStatus.textContent = "Button disabled: Not authenticated";
+      setTimeout(() => {
         window.location.href = "index.html";
+      }, 2000);
+      return;
+    }
+    
+    currentUser = user;
+    addDebug(`✅ User logged in: ${user.email}`);
+    addDebug(`✅ User UID: ${user.uid}`);
+    
+    document.getElementById("userInfo").innerHTML = `
+      Logged in as: <strong>${user.email}</strong>
+      <button onclick="window.auth.signOut().then(() => location.href='index.html')" 
+              style="padding:4px 8px; margin-left:10px;">Logout</button>
+    `;
+    
+    // ENABLE BUTTON
+    document.getElementById("createOrderBtn").disabled = false;
+    buttonStatus.textContent = "Button enabled: Ready to create orders!";
+    buttonStatus.style.color = "green";
+    addDebug("✅ Create Order button ENABLED");
+  });
+  
+  // Create order button handler
+  document.getElementById("createOrderBtn").addEventListener("click", async () => {
+    addDebug("🔵 Create button clicked!");
+    
+    if (!currentUser) {
+      addDebug("❌ No user available", false);
+      alert("Please wait for authentication to complete");
+      return;
+    }
+    
+    const bookName = document.getElementById("bookName").value.trim();
+    const targetQty = parseInt(document.getElementById("targetQty").value);
+    const deadlineInput = document.getElementById("deadline").value;
+    
+    addDebug(`📝 Book: ${bookName}`);
+    addDebug(`📝 Target: ${targetQty}`);
+    addDebug(`📝 Deadline: ${deadlineInput}`);
+    
+    if (!bookName || !targetQty || targetQty < 2 || !deadlineInput) {
+      addDebug("❌ Validation failed", false);
+      alert("Please fill all fields correctly (target must be at least 2)");
+      return;
+    }
+    
+    const deadline = new Date(deadlineInput);
+    if (deadline <= new Date()) {
+      addDebug("❌ Deadline is in the past", false);
+      alert("Deadline must be in the future");
+      return;
+    }
+    
+    const btn = document.getElementById("createOrderBtn");
+    btn.disabled = true;
+    btn.textContent = "Creating...";
+    buttonStatus.textContent = "Creating order...";
+    
+    const orderData = {
+      bookName: bookName,
+      targetQuantity: targetQty,
+      currentQuantity: 1,
+      status: "open",
+      createdBy: currentUser.uid,
+      creatorEmail: currentUser.email,
+      deadline: deadline,
+      createdAt: new Date(),
+      participants: [currentUser.uid]
+    };
+    
+    addDebug("📦 Order data prepared");
+    addDebug("📤 Attempting Firestore write...");
+    
+    try {
+      const orderRef = await addDoc(collection(window.db, "groupOrders"), orderData);
+      addDebug(`✅ SUCCESS! Order ID: ${orderRef.id}`);
+      alert(`✅ Order created successfully!\n\nOrder ID: ${orderRef.id}`);
+      
+      // Clear form
+      document.getElementById("bookName").value = "";
+      document.getElementById("targetQty").value = "";
+      document.getElementById("deadline").value = "";
+      
+    } catch (error) {
+      addDebug(`❌ Firestore error: ${error.code}`, false);
+      addDebug(`❌ Error message: ${error.message}`, false);
+      alert(`❌ Failed to create order:\n${error.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Create Group Order";
+      buttonStatus.textContent = "Button enabled: Ready to create orders!";
+    }
+  });
+  
+  // Setup realtime listener
+  addDebug("👂 Setting up Firestore listener...");
+  
+  onSnapshot(
+    collection(window.db, "groupOrders"),
+    (snapshot) => {
+      addDebug(`📥 Received ${snapshot.size} orders from Firestore`);
+      
+      const list = document.getElementById("ordersList");
+      list.innerHTML = "";
+      
+      if (snapshot.empty) {
+        list.innerHTML = "<p>No active orders yet. Create one above!</p>";
+        return;
       }
-    });
+      
+      snapshot.forEach(doc => {
+        const order = doc.data();
+        const orderId = doc.id;
+        const percent = Math.min((order.currentQuantity / order.targetQuantity) * 100, 100);
+        const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline);
+        const hasJoined = currentUser && order.participants && order.participants.includes(currentUser.uid);
+        
+        const orderDiv = document.createElement("div");
+        orderDiv.className = "order-item";
+        orderDiv.innerHTML = `
+          <b>${order.bookName}</b><br/>
+          Buyers: ${order.currentQuantity}/${order.targetQuantity}<br/>
+          Status: ${order.status}<br/>
+          Deadline: ${deadline.toLocaleString()}<br/>
+          Created by: ${order.creatorEmail || 'Unknown'}<br/>
+          <div class="progress">
+            <div class="bar" style="width:${percent}%"></div>
+          </div>
+          ${!hasJoined && order.currentQuantity < order.targetQuantity ? 
+            `<button class="join-btn" onclick="joinOrder('${orderId}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Join Order</button>` : 
+            hasJoined ? '<p style="color:#34a853; margin-top:8px;">✓ You joined this order</p>' : ''}
+        `;
+        list.appendChild(orderDiv);
+      });
+    },
+    (error) => {
+      addDebug(`❌ Listener error: ${error.message}`, false);
+      document.getElementById("ordersList").innerHTML = 
+        `<p style="color:red;">Error: ${error.message}</p>`;
+    }
+  );
+  
+  // Join order function
+  window.joinOrder = async (orderId) => {
+    if (!currentUser) {
+      alert("Must be logged in");
+      return;
+    }
+    
+    try {
+      addDebug(`🔵 Joining order: ${orderId}`);
+      const orderRef = doc(window.db, "groupOrders", orderId);
+      const orderSnap = await getDoc(orderRef);
+      const orderData = orderSnap.data();
+      
+      await updateDoc(orderRef, {
+        currentQuantity: increment(1),
+        participants: [...(orderData.participants || []), currentUser.uid]
+      });
+      
+      addDebug(`✅ Joined order successfully`);
+      alert("✅ Successfully joined the order!");
+    } catch (error) {
+      addDebug(`❌ Join failed: ${error.message}`, false);
+      alert(`❌ Failed to join: ${error.message}`);
+    }
+  };
+  
+}, 1000); // Wait 1 second for firebase.js to load
 
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await signOut(auth);
-      window.location.href = "index.html";
-    });
-  </script>
+// Set minimum datetime to now
+const now = new Date();
+now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+document.getElementById("deadline").min = now.toISOString().slice(0, 16);
+</script>
 </body>
 </html>

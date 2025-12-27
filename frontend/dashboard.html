@@ -21,6 +21,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .status-ok { color: green; }
 .status-error { color: red; }
 </style>
+<script type="module">
+  import { initGroupOrders } from "./groupOrders.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  onAuthStateChanged(window.auth, (user) => {
+    if (user) {
+      console.log("Dashboard auth OK ✔");
+      initGroupOrders();
+    }
+  });
+</script>
+
 </head>
 <body>
 <div class="debug-box" id="debugBox">

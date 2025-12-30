@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sewa Setu – Bulk Books</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script type="module" src="firebase.js"></script>
+<script type="module" src="groupBulkOrders.js"></script>
+</head>
+
+<body>
+
+<h3>Create Bulk Book Order</h3>
+<input id="bookTitle" placeholder="Book Title" />
+<input id="bookAuthor" placeholder="Author" />
+<input id="bookPrice" type="number" placeholder="Price per book" />
+<input id="targetQty" type="number" placeholder="Minimum buyers" />
+<input id="orderDeadline" type="datetime-local" />
+<button id="createBookOrderBtn">Create Bulk Order</button>
+
+<h3>Active Bulk Orders</h3>
+<div id="bulkOrdersList"></div>
+
+<script>
+document.getElementById("createBookOrderBtn").addEventListener("click", async () => {
+  const b = document.getElementById("bookTitle").value;
+  const a = document.getElementById("bookAuthor").value;
+  const p = document.getElementById("bookPrice").value;
+  const t = document.getElementById("targetQty").value;
+  const d = document.getElementById("orderDeadline").value;
+
+  await createBookBulkOrder(b,a,p,t,d);
+});
+
+const box = document.getElementById("bulkOrdersList");
+
+listenGroupOrders((orders) => {
+  box.innerHTML = "";
+  orders.forEach(o => {
+    box.innerHTML += `
+      <div>
+        <b>${o.bookTitle}</b> (${o.currentQuantity}/${o.targetQuantity})<br/>
+        <button onclick="joinBookBulkOrder('${o.id}')">Join Group</button>
+      </div><hr/>
+    `;
+  });
+});
+</script>
+
+</body>
+</html>

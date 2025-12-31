@@ -22,22 +22,25 @@ button:hover { opacity:0.9; }
   <div id="adminOrdersList">Loading orders...</div>
 </div>
 
-<script type="module">
-import { collection, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<script type="module" src="admin.js">
+import { collection, doc, updateDoc, onSnapshot, query, orderBy } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Auth gate for admin
+// Hard admin gate using UID
+const ADMIN_UIDS = ["QMEjKoukcTNxQBhWLEkce0cfX8D2"];
 onAuthStateChanged(window.auth, (user) => {
-  if (!user) {
-    alert("Not logged in ❌ Redirecting...");
-    window.location.href = "index.html";
-  } else {
-    console.log("Admin authenticated ✔ UID:", user.uid);
+  if (!user || !ADMIN_UIDS.includes(user.uid)) {
+    document.body.innerHTML = "Access Denied ❌";
+    throw new Error("Not admin");
   }
 });
 
-// Live render of group orders
-onSnapshot(collection(window.firestoreDB, "groupOrders"), (snap) => {
+// Query all orders sorted by deadline
+const ordersQuery = query(collection(window.firestoreDB, "groupOrders"), orderBy("deadline"));
+
+onSnapshot(ordersQuery, (snap) => {
   const list = document.getElementById("adminOrdersList");
   list.innerHTML = "";
 
@@ -49,12 +52,23 @@ onSnapshot(collection(window.firestoreDB, "groupOrders"), (snap) => {
   snap.forEach(d => {
     const o = d.data();
     const id = d.id;
+
+    const buyers = `${o.currentQuantity ?? 0}/${o.targetQuantity ?? "N/A"}`;
+
+    // Safe deadline parsing
+    let deadlineText = "Invalid date";
+    if (o.deadline?.toDate) {
+      try { deadlineText = o.deadline.toDate().toLocaleString(); } catch {}
+    }
+
+    const status = o.status ?? "pending";
+
     list.innerHTML += `
       <div class="order-item">
-        <b>${o.bookName}</b><br/>
-        Buyers: ${o.currentQuantity}/${o.targetQuantity}<br/>
-        Status: ${o.status}<br/>
-        Deadline: ${o.deadline.toDate().toLocaleString()}<br/>
+        <b>${o.bookName ?? "Unnamed Order"}</b><br/>
+        Buyers: ${buyers}<br/>
+        Status: ${status}<br/>
+        Deadline: ${deadlineText}<br/>
         <button onclick="confirmVendor('${id}')">Confirm Vendor</button>
         <button onclick="markCompleted('${id}')">Mark Completed</button>
       </div><hr/>
@@ -62,21 +76,18 @@ onSnapshot(collection(window.firestoreDB, "groupOrders"), (snap) => {
   });
 });
 
-// Admin action functions
+// Firestore mutation functions (fixed)
 window.confirmVendor = async function(id) {
-  try {
-    await updateDoc(doc(window.firestoreDB, "groupOrders", id), { status: "confirmed", status: "threshold reached" });
-    alert("Vendor confirmed ✔");
-  } catch (e) { console.error(e); }
+  await updateDoc(doc(window.firestoreDB, "groupOrders", id), { 
+    status: "vendor_confirmed",
+    confirmedAt: serverTimestamp()
+  }).catch(console.error);
 };
 
 window.markCompleted = async function(id) {
-  try {
-    await updateDoc(doc(window.firestoreDB, "groupOrders", id), { status: "completed" });
-    alert("Order completed ✔");
-  } catch (e) { console.error(e); }
+  await updateDoc(doc(window.firestoreDB, "groupOrders", id), { 
+    status: "completed",
+    completedAt: serverTimestamp()
+  }).catch(console.error);
 };
 </script>
-
-</body>
-</html>

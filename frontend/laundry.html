@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sewa Setu – Laundry Slots</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script type="module" src="firebase.js"></script>
+<script type="module" src="laundry.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; }
+input { width:100%; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:6px; }
+button { width:100%; padding:12px; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:15px; }
+button:hover { opacity:0.9; }
+.slot-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h3>Create Laundry Slot (Vendor)</h3>
+  <input id="vendorId" placeholder="Vendor ID" />
+  <input id="timeSlot" placeholder="Time Slot (e.g., 10AM–12PM)" />
+  <button id="createLaundrySlotBtn">Create Slot</button>
+  <p id="slotStatus"></p>
+</div>
+
+<div class="card">
+  <h3>Available Laundry Slots</h3>
+  <div id="laundrySlotsList">Loading slots...</div>
+</div>
+
+<script type="module">
+import { listenLaundrySlots } from "./laundry.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+let user = null;
+
+onAuthStateChanged(window.auth, (u) => {
+  user = u;
+  if (!user) {
+    alert("Login required ❌ Redirecting...");
+    window.location.href = "index.html";
+  }
+});
+
+// Bind Create Slot Button
+document.getElementById("createLaundrySlotBtn").addEventListener("click", async () => {
+  if (!user) return alert("Login required ❌");
+
+  const vendor = document.getElementById("vendorId").value.trim();
+  const slot   = document.getElementById("timeSlot").value.trim();
+
+  if (!vendor || !slot) return alert("Invalid input ❌");
+
+  try {
+    await createLaundrySlot(vendor, slot);
+    document.getElementById("slotStatus").innerText = "Slot created ✔";
+  } catch (e) {
+    console.error(e);
+    alert("Slot creation failed ❌");
+  }
+});
+
+// Render Slots Live
+listenLaundrySlots((slots) => {
+  const box = document.getElementById("laundrySlotsList");
+  box.innerHTML = "";
+  if (slots.length === 0) {
+    box.innerText = "No slots yet.";
+    return;
+  }
+
+  slots.forEach(s => {
+    box.innerHTML += `
+      <div class="slot-item">
+        <b>Vendor:</b> ${s.vendorId}<br/>
+        <b>Slot:</b> ${s.timeSlot}<br/>
+        <b>Status:</b> ${s.booked ? "Booked ❌" : "Open ✔"}<br/>
+        ${!s.booked ? `<button onclick="bookLaundrySlot('${s.id}')">Book Slot</button>` : ""}
+      </div><hr/>
+    `;
+  });
+});
+</script>
+
+</body>
+</html>

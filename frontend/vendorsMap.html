@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vendor Locator – Ashok Rajpath</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script type="module" src="firebase.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+#map { width:100%; height:70vh; margin-bottom:10px; }
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h2>Vendor Locator – Ashok Rajpath</h2>
+  <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;"/>
+  <div id="map"></div>
+  <div id="vendorDetails" style="font-size:14px;"></div>
+  <button onclick="clearSelection()">Remove Selected Location</button>
+  <button onclick="addVendor()">Add Vendor at Selected Location</button>
+<!-- </div> -->
+
+<!-- This script MUST be module type because we use imports -->
+<script type="module">
+import { auth, db } from "./firebase.js";
+import { onSnapshot, collection } from "./firebase.js";
+
+// Init map
+const map = L.map('map').setView([25.6207, 85.1724], 14);
+
+let selectedLat = null;
+let selectedLng = null;
+let selectionMarker = null;
+
+map.on("click", (e) => {
+  if (selectionMarker) {
+    map.removeLayer(selectionMarker);
+  }
+  selectedLat = e.latlng.lat;
+  selectedLng = e.latlng.lng;
+  selectionMarker = L.marker([selectedLat, selectedLng]).addTo(map)
+    .bindPopup("Location selected ✔").openPopup();
+  console.log("Selected:", selectedLat, selectedLng);
+});
+
+window.clearSelection = function() {
+  if (selectionMarker) {
+    map.removeLayer(selectionMarker);
+    selectionMarker = null;
+    selectedLat = null;
+    selectedLng = null;
+    console.log("Cleared");
+  }
+};
+
+import { addDoc } from "./firebase.js";
+
+window.addVendor = async function() {
+  if (!selectedLat || !selectedLng) {
+    alert("Select a location first ❌");
+    return;
+  }
+  await addDoc(collection(db, "vendors"), {
+    name: "Co Shop Test",
+    category: "Books",
+    phone: "0000000000",
+    timings: "N/A",
+    lat: selectedLat,
+    lng: selectedLng
+  });
+  alert("Vendor added ✔ Refresh to see pin.");
+};
+
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let markers = [];
+
+// Remove old markers safely
+function clearMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
+
+// Fetch vendors from Firestore and plot pins
+onSnapshot(collection(db, "vendors"), (snap) => {
+  clearMarkers();
+
+  if (snap.empty) {
+    console.warn("No vendors found in Firestore");
+    return;
+  }
+
+  snap.forEach(d => {
+    const v = d.data();
+    if (!v.lat || !v.lng) {
+      console.warn("Skipping vendor (missing coords):", d.id, v);
+      return;
+    }
+
+    const marker = L.marker([v.lat, v.lng]).addTo(map);
+
+    marker.on("click", () => {
+      document.getElementById("vendorDetails").innerHTML = `
+        <b>${v.name ?? "N/A"}</b><br/>
+        Category: ${v.category ?? "N/A"}<br/>
+        Phone: ${v.phone ?? "N/A"}<br/>
+        Timings: ${v.timings ?? "N/A"}
+      `;
+    });
+
+    markers.push(marker);
+  });
+});
+
+// Client-side search filter
+document.getElementById("searchBar").addEventListener("input", (e) => {
+  const term = e.target.value.toLowerCase();
+  markers.forEach(m => {
+    const name = m.options.title?.toLowerCase() || "";
+    m.setOpacity(name.includes(term) ? 1 : 0);
+  });
+});
+
+// let selectedLat = null;
+// let selectedLng = null;
+
+// // Example vendor add function
+// window.addVendor = async function() {
+//   const name = document.getElementById("vName").value;
+//   if (!selectedLat || !selectedLng) {
+//     alert("Select location on map first ❌");
+//     return;
+//   }
+//   await addDoc(collection(db, "vendors"), {
+//     name,
+//     category: document.getElementById("vCat").value ?? "N/A",
+//     phone: document.getElementById("vPhone").value ?? "N/A",
+//     timings: document.getElementById("vTime").value ?? "N/A",
+//     lat: selectedLat,
+//     lng: selectedLng
+//   });
+//   alert("Vendor added ✔");
+// }
+
+</script>
+</body>
+</html>

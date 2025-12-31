@@ -2,49 +2,176 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Sewa Setu – Bulk Books</title>
+<title>Sewa Setu – Bulk Book Orders</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Firebase + bulk order script -->
 <script type="module" src="firebase.js"></script>
 <script type="module" src="groupBulkOrders.js"></script>
+
+<!-- Vendor selector script -->
+<script type="module" src="vendorSelector.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; }
+input, select { width:100%; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:6px; }
+button { width:100%; padding:12px; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:15px; }
+.order-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; }
+.progress { background:#e0e0e0; border-radius:5px; height:8px; width:100%; margin-top:8px; }
+.bar { height:8px; border-radius:5px; background:#34a853; }
+</style>
 </head>
 
 <body>
 
-<h3>Create Bulk Book Order</h3>
-<input id="bookTitle" placeholder="Book Title" />
-<input id="bookAuthor" placeholder="Author" />
-<input id="bookPrice" type="number" placeholder="Price per book" />
-<input id="targetQty" type="number" placeholder="Minimum buyers" />
-<input id="orderDeadline" type="datetime-local" />
-<button id="createBookOrderBtn">Create Bulk Order</button>
+<div class="card">
+  <h3>Create Group Book Order</h3>
+  <select id="vendorDropdown" required></select>
+  <input id="bookTitle" placeholder="Book Title" required />
+  <input id="bookAuthor" placeholder="Author Name" required />
+  <input id="bookPrice" type="number" placeholder="Price per Book (₹)" required />
+  <input id="targetQty" type="number" placeholder="Minimum Buyers" required />
+  <input id="orderDeadline" type="datetime-local" required />
 
-<h3>Active Bulk Orders</h3>
-<div id="bulkOrdersList"></div>
+  <button id="createOrderBtn">Create Group Order</button>
+  <p id="orderStatus"></p>
+</div>
 
-<script>
-document.getElementById("createBookOrderBtn").addEventListener("click", async () => {
-  const b = document.getElementById("bookTitle").value;
-  const a = document.getElementById("bookAuthor").value;
-  const p = document.getElementById("bookPrice").value;
-  const t = document.getElementById("targetQty").value;
-  const d = document.getElementById("orderDeadline").value;
+<div class="card">
+  <h3>Active Group Orders</h3>
+  <div id="bulkOrdersList">Loading orders...</div>
+</div>
 
-  await createBookBulkOrder(b,a,p,t,d);
+<script type="module">
+import { loadVendorsToDropdown } from "./vendorSelector.js";
+
+// Wait for auth + Firebase to be ready
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, addDoc, onSnapshot, doc, updateDoc, increment, arrayUnion, getDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+let user = null;
+onAuthStateChanged(window.auth, (u) => {
+  user = u;
+  if (user) {
+    console.log("Auth OK ✔");
+    document.getElementById("createOrderBtn").disabled = false;
+  }
 });
 
-const box = document.getElementById("bulkOrdersList");
+// Populate vendor dropdown
+loadVendorsToDropdown("vendorDropdown");
 
-listenGroupOrders((orders) => {
-  box.innerHTML = "";
-  orders.forEach(o => {
-    box.innerHTML += `
-      <div>
-        <b>${o.bookTitle}</b> (${o.currentQuantity}/${o.targetQuantity})<br/>
-        <button onclick="joinBookBulkOrder('${o.id}')">Join Group</button>
-      </div><hr/>
-    `;
-  });
+// Create order click
+document.getElementById("createOrderBtn").addEventListener("click", async () => {
+  if (!user) return alert("Login required ❌");
+
+  const vendorId = document.getElementById("vendorDropdown").value;
+  const bookTitle = document.getElementById("bookTitle").value.trim();
+  const bookAuthor = document.getElementById("bookAuthor").value.trim();
+  const bookPrice = parseInt(document.getElementById("bookPrice").value);
+  const targetQty = parseInt(document.getElementById("targetQty").value);
+  const deadlineInput = document.getElementById("orderDeadline").value;
+
+  if (!vendorId) return alert("Select a vendor ❌");
+  if (!bookTitle || !bookAuthor || !bookPrice || targetQty < 2 || !deadlineInput) {
+    return alert("Invalid input ❌");
+  }
+
+  const deadline = new Date(deadlineInput);
+  if (deadline <= new Date()) return alert("Deadline must be future ❌");
+
+  try {
+    const ref = await addDoc(collection(window.firestoreDB, "groupOrders"), {
+      vendorId,
+      bookTitle,
+      bookAuthor,
+      pricePerBook: bookPrice,
+      targetQuantity: targetQty,
+      currentQuantity: 1,
+      status: "open",
+      createdBy: user.uid,
+      creatorEmail: user.email,
+      deadline,
+      participants: arrayUnion(user.uid),
+      createdAt: new Date()
+    });
+
+    console.log("Order created ✔", ref.id);
+    alert("Order placed ✔");
+
+  } catch (e) {
+    console.error(e);
+    alert("Order failed ❌");
+  }
 });
+
+// Render orders live
+onSnapshot(
+  query(collection(window.firestoreDB, "groupOrders"), orderBy("createdAt","desc")),
+  async (snap) => {
+    const box = document.getElementById("bulkOrdersList");
+    box.innerHTML = "";
+
+    if (snap.empty) {
+      box.innerHTML = "<p>No active orders yet.</p>";
+      return;
+    }
+
+    for (const d of snap.docs) {
+      const o = d.data();
+      const percent = Math.min((o.currentQuantity / o.targetQuantity) * 100, 100);
+      const deadline = o.deadline.toDate ? o.deadline.toDate() : new Date(o.deadline);
+      const hasJoined = user && o.participants?.includes(user.uid);
+
+      box.innerHTML += `
+        <div class="order-item">
+          <b>${o.bookTitle}</b><br/>
+          by ${o.bookAuthor}<br/>
+          Vendor: ${o.vendorId}<br/>
+          Price: ₹${o.pricePerBook}<br/>
+          Buyers: ${o.currentQuantity}/${o.targetQuantity}<br/>
+          Status: ${o.status}<br/>
+          Deadline: ${deadline.toLocaleString()}<br/>
+
+          <div class="progress">
+            <div class="bar" style="width:${percent}%"></div>
+          </div>
+
+          ${
+            !hasJoined && o.currentQuantity < o.targetQuantity && !hasJoined && Date.now() < deadline.getTime()
+            ? `<button class="join-btn" data-order-id="${d.id}">Join Group</button>`
+            : hasJoined
+            ? `<p style="color:#34a853; margin-top:8px;">✓ You joined this order</p>`
+            : ""
+          }
+        </div>
+        <hr/>
+      `;
+    }
+
+    // Bind join buttons
+    document.querySelectorAll(".join-btn").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        const orderId = e.target.dataset.orderId;
+        const ref = doc(window.firestoreDB, "groupOrders", orderId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return alert("Order missing ❌");
+
+        try {
+          await updateDoc(ref, {
+            currentQuantity: increment(1),
+            participants: arrayUnion(user.uid)
+          });
+          alert("Joined order ✔");
+        } catch (err) {
+          console.error(err);
+          alert("Join failed ❌");
+        }
+      });
+    });
+  }
+);
 </script>
 
 </body>

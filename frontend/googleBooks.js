@@ -1,10 +1,11 @@
-import { db, addDoc, getDoc, doc, collection } from "./firebase.js";
+import { db, getDoc, doc } from "./firebase.js";
+import { setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const CACHE_COL = "bookCache";
 
-async function fetchBookData(title, author) {
-  const cacheRef = doc(db, CACHE_COL, `${title}-${author}`);
-  const cached = await getDoc(cacheRef);
+export async function fetchBookData(title, author) {
+  const ref = doc(db, CACHE_COL, `${title}-${author}`);
+  const cached = await getDoc(ref);
   if (cached.exists()) {
     console.log("Cache hit ✔", cached.data());
     return cached.data();
@@ -21,11 +22,11 @@ async function fetchBookData(title, author) {
     };
     console.log("API success ✔", info);
 
-    await addDoc(collection(db, CACHE_COL), {
-      _id: `${title}-${author}`,
+    await setDoc(ref, {
       ...info,
-      cachedAt: new Date()
+      cachedAt: serverTimestamp()
     });
+
     console.log("Cached to Firestore ✔");
     return info;
   } catch (e) {
@@ -34,12 +35,11 @@ async function fetchBookData(title, author) {
   }
 }
 
-function calcBulkDiscount(buyers) {
-  if (buyers >= 10) return 0.30;
-  return 0;
+export function calcBulkDiscount(buyers) {
+  return buyers >= 10 ? 0.30 : 0;
 }
 
-async function searchBook(title, author, buyers) {
+export async function searchBook(title, author, buyers) {
   const book = await fetchBookData(title, author);
   if (!book) {
     console.error("Search failed ❌ No data");
@@ -47,10 +47,9 @@ async function searchBook(title, author, buyers) {
   }
   const discount = calcBulkDiscount(buyers);
   const finalPrice = book.price ? book.price * (1 - discount) : null;
-  console.log(`Discount: ${discount*100}%`, `Final price:`, finalPrice);
+  console.log(`Discount: ${discount*100}% | Final Price:`, finalPrice);
   return { ...book, discount, finalPrice };
 }
 
-// expose for console testing
 window.searchBook = searchBook;
 export { fetchBookData, searchBook, calcBulkDiscount };

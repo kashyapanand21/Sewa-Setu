@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script type="module" src="firebase.js"></script>
+<script type="module" src="serviceSlots.js"></script>
 
 <style>
 body { font-family: Arial; background:#f5f5f5; padding:20px; }
@@ -119,6 +120,21 @@ document.getElementById("searchBar").addEventListener("input", (e) => {
     m.setOpacity(name.includes(term) ? 1 : 0);
   });
 });
+
+// Test serviceSlots functions availability
+setTimeout(() => {
+  console.log("🧪 Testing serviceSlots functions...");
+  console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
+  console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
+  console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
+  console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
+  
+  if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
+    console.log("✅ All serviceSlots functions are available!");
+  } else {
+    console.error("❌ Some serviceSlots functions are missing!");
+  }
+}, 1000); // Wait 1 second for modules to load
 </script>
 </body>
 </html>

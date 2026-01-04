@@ -20,17 +20,28 @@ body { font-family: Arial; background:#f5f5f5; padding:20px; }
 
 <body>
 <div class="card">
-  <h2>Vendor Locator – Ashok Rajpath</h2>
-  <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;"/>
+  <h2 id="pageTitle">Vendor Locator – Ashok Rajpath</h2>
+  <div id="searchContainer">
+    <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;"/>
+  </div>
   <div id="map"></div>
   <div id="vendorDetails" style="font-size:14px;"></div>
 
-  <button onclick="window.clearSelection()">Remove Selected Location</button>
-  <button onclick="window.addVendor()">Add Vendor at Selected Location</button>
+  <div id="selectionButtons">
+    <button onclick="window.clearSelection()">Remove Selected Location</button>
+    <button id="confirmBtn" onclick="window.confirmLocation()" style="display:none;background:#34a853;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+      ✅ Confirm Selected Location
+    </button>
+    <button id="addVendorBtn" onclick="window.addVendor()" style="display:none;">Add Vendor at Selected Location</button>
+  </div>
 </div>
 
 <script type="module">
 import { db, addDoc, onSnapshot, collection } from "./firebase.js";
+
+// Check if we're in selection mode (for vendor registration)
+const urlParams = new URLSearchParams(window.location.search);
+const isSelectionMode = urlParams.get('select') === 'true';
 
 const map = L.map('map').setView([25.6207, 85.1724], 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -38,6 +49,18 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let selectedLat = null;
 let selectedLng = null;
 let selectionMarker = null;
+
+// Update UI based on mode
+if (isSelectionMode) {
+  document.getElementById('pageTitle').textContent = 'Select Your Store Location';
+  document.getElementById('searchContainer').style.display = 'none';
+  document.getElementById('vendorDetails').style.display = 'none';
+  document.getElementById('confirmBtn').style.display = 'inline-block';
+  document.getElementById('addVendorBtn').style.display = 'none';
+} else {
+  document.getElementById('confirmBtn').style.display = 'none';
+  document.getElementById('addVendorBtn').style.display = 'inline-block';
+}
 
 // Single marker selection
 map.on("click", (e) => {
@@ -47,6 +70,19 @@ map.on("click", (e) => {
   selectionMarker = L.marker([selectedLat, selectedLng]).addTo(map)
     .bindPopup("Location selected ✔").openPopup();
   console.log("📍 Selected:", selectedLat, selectedLng);
+  
+  // Show confirmation message in selection mode
+  if (isSelectionMode) {
+    document.getElementById('vendorDetails').style.display = 'block';
+    document.getElementById('vendorDetails').innerHTML = `
+      <div style="background:#e8f5e9;padding:10px;border-radius:6px;margin-top:10px;">
+        <b>✅ Location Selected!</b><br/>
+        Latitude: ${selectedLat.toFixed(6)}<br/>
+        Longitude: ${selectedLng.toFixed(6)}<br/>
+        <small>Click "Confirm Selected Location" to use this location</small>
+      </div>
+    `;
+  }
 });
 
 // Remove selection manually
@@ -56,8 +92,30 @@ window.clearSelection = function() {
     selectionMarker = null;
     selectedLat = null;
     selectedLng = null;
+    if (isSelectionMode) {
+      document.getElementById('vendorDetails').style.display = 'none';
+    }
     console.log("Selection cleared ✔");
   }
+};
+
+// Confirm location for vendor registration
+window.confirmLocation = function() {
+  if (!selectedLat || !selectedLng) {
+    alert("Please select a location on the map first ❌");
+    return;
+  }
+  
+  // Save coordinates to localStorage
+  localStorage.setItem('selectedVendorLocation', JSON.stringify({
+    lat: selectedLat,
+    lng: selectedLng
+  }));
+  
+  // Redirect back to vendor form
+  const returnUrl = localStorage.getItem('vendorFormReturnUrl') || 'vendors.html';
+  localStorage.removeItem('vendorFormReturnUrl');
+  window.location.href = returnUrl;
 };
 
 // Add vendor using selected coords
@@ -83,14 +141,16 @@ window.addVendor = async function() {
   }
 };
 
-// Render vendor pins
+// Render vendor pins (skip in selection mode)
 let vendorMarkers = [];
 function clearVendorMarkers() {
   vendorMarkers.forEach(m => map.removeLayer(m));
   vendorMarkers = [];
 }
 
-onSnapshot(collection(db, "vendors"), (snap) => {
+// Only load vendors if not in selection mode
+if (!isSelectionMode) {
+  onSnapshot(collection(db, "vendors"), (snap) => {
   clearVendorMarkers();
   snap.forEach(d => {
     const v = d.data();
@@ -110,31 +170,34 @@ onSnapshot(collection(db, "vendors"), (snap) => {
     });
     vendorMarkers.push(m);
   });
-});
-
-// Search filter pins instantly
-document.getElementById("searchBar").addEventListener("input", (e) => {
-  const term = e.target.value.toLowerCase();
-  vendorMarkers.forEach(m => {
-    const name = m.vendorData?.name?.toLowerCase() || "";
-    m.setOpacity(name.includes(term) ? 1 : 0);
   });
-});
 
-// Test serviceSlots functions availability
-setTimeout(() => {
-  console.log("🧪 Testing serviceSlots functions...");
-  console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
-  console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
-  console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
-  console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
-  
-  if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
-    console.log("✅ All serviceSlots functions are available!");
-  } else {
-    console.error("❌ Some serviceSlots functions are missing!");
-  }
-}, 1000); // Wait 1 second for modules to load
+  // Search filter pins instantly
+  document.getElementById("searchBar").addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    vendorMarkers.forEach(m => {
+      const name = m.vendorData?.name?.toLowerCase() || "";
+      m.setOpacity(name.includes(term) ? 1 : 0);
+    });
+  });
+}
+
+// Test serviceSlots functions availability (skip in selection mode)
+if (!isSelectionMode) {
+  setTimeout(() => {
+    console.log("🧪 Testing serviceSlots functions...");
+    console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
+    console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
+    console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
+    console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
+    
+    if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
+      console.log("✅ All serviceSlots functions are available!");
+    } else {
+      console.error("❌ Some serviceSlots functions are missing!");
+    }
+  }, 1000); // Wait 1 second for modules to load
+}
 </script>
 </body>
 </html>

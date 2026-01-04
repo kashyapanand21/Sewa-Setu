@@ -1,0 +1,25 @@
+Students at NIT Patna depend on offline vendors on Ashok Rajpath for technical books and printing.  
+Group buying happens informally on WhatsApp, causing failed orders, crowding, and zero bargaining structure.
+
+Sewa-Setu fixes this by turning scattered demand into organized bargaining power and vendor coordination.
+
+Live demo:
+I log in using Google Sign-In. My UID is written to Firestore instantly.
+On the student dashboard, I create a bulk request for a technical book.
+Other students join the request. Duplicate joins are blocked.
+Once participants reach 10, 20, or 30, the system automatically applies 30%, 40%, or 50% discount tiers.
+Admin panel confirms and completes the order safely without vendor tech involvement.
+
+Next, the vendor locator streams verified printers and shops in realtime on OpenStreetMap using Leaflet.
+No API key required, no crashes, no console errors.
+
+Then, I create a printing slot with a 3-buyer threshold and a 2-minute expiry for demo.
+A student books the slot. Duplicate booking is blocked.
+When the deadline passes, a 60-second safety loop flips the slot status to expired reliably.
+
+Finally, the discount engine outputs a structured JSON report directly in the browser console.
+This proves atomic safety, caching, and tier logic work end-to-end.
+
+Impact:
+Lower cost for students, less crowding at shops, guaranteed demand for vendors, structured workflow for coordination.
+That’s Sewa-Setu — a collective service bridge, not a marketplace.

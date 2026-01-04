@@ -1,4 +1,4 @@
-````
+
 # Sewa-Setu (Student Collective Service Bridge)
 
 ## Problem Statement
@@ -46,7 +46,7 @@ const slotId = await window.createSlot("demoVendor1", "printing", "4PM–6PM", 8
 await window.bookSlot(slotId, "studentTest1");
 await window.bookSlot(slotId, "studentTest1"); // should block duplicate
 await window.flipExpiredSlots();
-````
+
 
 ```js
 await window.generateDiscountReport("Operating System Concepts", "Silberschatz", 25);

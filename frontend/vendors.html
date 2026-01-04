@@ -100,6 +100,25 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .location-select-btn {
+            width: 100%;
+            padding: 12px;
+            background: #34a853;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .location-select-btn:hover {
+            background: #2d8e47;
+            transform: translateY(-1px);
         }
 
         .submit-btn {
@@ -393,9 +412,13 @@
                     <div class="form-group">
                         <label>GPS Coordinates (Optional - for Google Maps)</label>
                         <div class="coordinates-grid">
-                            <input type="number" id="vendorLat" step="0.000001" placeholder="Latitude">
-                            <input type="number" id="vendorLng" step="0.000001" placeholder="Longitude">
+                            <input type="number" id="vendorLat" step="0.000001" placeholder="Latitude" readonly>
+                            <input type="number" id="vendorLng" step="0.000001" placeholder="Longitude" readonly>
                         </div>
+                        <button type="button" id="selectLocationBtn" class="location-select-btn">
+                            📍 Select Location on Map
+                        </button>
+                        <div id="locationStatus" style="margin-top: 8px; font-size: 0.9rem; color: #666;"></div>
                     </div>
 
                     <button type="submit" class="submit-btn" id="submitBtn">
@@ -440,6 +463,30 @@
         let currentCategory = null;
         let unsubscribe = null;
         let currentUser = null;
+
+        // Check for location selected from map (on page load)
+        function checkForSelectedLocation() {
+            const selectedLocation = localStorage.getItem('selectedVendorLocation');
+            if (selectedLocation) {
+                try {
+                    const coords = JSON.parse(selectedLocation);
+                    if (coords.lat && coords.lng) {
+                        document.getElementById('vendorLat').value = coords.lat;
+                        document.getElementById('vendorLng').value = coords.lng;
+                        document.getElementById('locationStatus').innerHTML = 
+                            `✅ Location selected: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+                        document.getElementById('locationStatus').style.color = '#34a853';
+                        // Clear localStorage after reading
+                        localStorage.removeItem('selectedVendorLocation');
+                    }
+                } catch (e) {
+                    console.error('Error parsing location data:', e);
+                }
+            }
+        }
+
+        // Check immediately on page load
+        checkForSelectedLocation();
 
         // Toast notification function
         function showToast(message, type = 'success') {
@@ -499,6 +546,14 @@
 
                 // Start loading vendors
                 loadVendors(currentCategory);
+            });
+
+            // Select Location button handler
+            document.getElementById('selectLocationBtn').addEventListener('click', () => {
+                // Store the return URL
+                localStorage.setItem('vendorFormReturnUrl', window.location.href);
+                // Redirect to map
+                window.location.href = 'vendorsMap.html?select=true';
             });
 
             // Form submit handler

@@ -8,86 +8,156 @@
 
 <style>
 body { font-family: Arial; background:#f5f5f5; padding:20px; }
-.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; }
 .order-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,0.05); }
 button { width:100%; padding:10px; margin-top:8px; cursor:pointer; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; }
 button:hover { opacity:0.9; }
+.user-info { background: #e8f0fe; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
 </style>
 </head>
 
 <body>
+<div class="user-info" id="userInfo">Checking authentication...</div>
 
 <div class="card">
   <h2>Admin Panel – Group Orders</h2>
   <div id="adminOrdersList">Loading orders...</div>
 </div>
 
-<script type="module" src="admin.js">
-import { collection, doc, updateDoc, onSnapshot, query, orderBy } 
+<script type="module">
+import { collection, doc, updateDoc, onSnapshot, query, orderBy, serverTimestamp } 
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged } 
+import { onAuthStateChanged, signOut } 
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Hard admin gate using UID
+// Hard admin gate using UID whitelist
 const ADMIN_UIDS = ["QMEjKoukcTNxQBhWLEkce0cfX8D2"];
-onAuthStateChanged(window.auth, (user) => {
-  if (!user || !ADMIN_UIDS.includes(user.uid)) {
-    document.body.innerHTML = "Access Denied ❌";
-    throw new Error("Not admin");
-  }
-});
 
-// Query all orders sorted by deadline
-const ordersQuery = query(collection(window.firestoreDB, "groupOrders"), orderBy("deadline"));
+function waitForFirebase(callback) {
+  let attempts = 0;
+  const checkInterval = setInterval(() => {
+    attempts++;
+    if (window.auth && window.db) {
+      clearInterval(checkInterval);
+      callback();
+    } else if (attempts >= 20) {
+      clearInterval(checkInterval);
+      console.error("Firebase initialization timeout");
+    }
+  }, 100);
+}
 
-onSnapshot(ordersQuery, (snap) => {
-  const list = document.getElementById("adminOrdersList");
-  list.innerHTML = "";
-
-  if (snap.empty) {
-    list.innerText = "No orders yet.";
-    return;
-  }
-
-  snap.forEach(d => {
-    const o = d.data();
-    const id = d.id;
-
-    const buyers = `${o.currentQuantity ?? 0}/${o.targetQuantity ?? "N/A"}`;
-
-    // Safe deadline parsing
-    let deadlineText = "Invalid date";
-    if (o.deadline?.toDate) {
-      try { deadlineText = o.deadline.toDate().toLocaleString(); } catch {}
+waitForFirebase(() => {
+  onAuthStateChanged(window.auth, (user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
     }
 
-    const status = o.status ?? "pending";
+    // Check if UID is in whitelist
+    if (!ADMIN_UIDS.includes(user.uid)) {
+      // Redirect to not authorized page
+      window.location.href = "notAuthorized.html";
+      return;
+    }
 
-    list.innerHTML += `
-      <div class="order-item">
-        <b>${o.bookName ?? "Unnamed Order"}</b><br/>
-        Buyers: ${buyers}<br/>
-        Status: ${status}<br/>
-        Deadline: ${deadlineText}<br/>
-        <button onclick="confirmVendor('${id}')">Confirm Vendor</button>
-        <button onclick="markCompleted('${id}')">Mark Completed</button>
-      </div><hr/>
+    // User is authorized admin
+    document.getElementById("userInfo").innerHTML = `
+      Logged in as Admin: <strong>${user.email || "N/A"}</strong>
+      <button onclick="handleLogout()" style="width:auto; padding:4px 8px; margin-left:10px; background:#ea4335;">Logout</button>
     `;
+
+    // Query all orders sorted by deadline
+    const ordersQuery = query(collection(window.db, "groupOrders"), orderBy("deadline"));
+
+    onSnapshot(ordersQuery, (snap) => {
+      const list = document.getElementById("adminOrdersList");
+      list.innerHTML = "";
+
+      if (snap.empty) {
+        list.innerText = "No orders yet.";
+        return;
+      }
+
+      snap.forEach(d => {
+        const o = d.data();
+        const id = d.id;
+
+        const buyers = `${o.currentQuantity ?? 0}/${o.targetQuantity ?? "N/A"}`;
+
+        // Safe deadline parsing
+        let deadlineText = "Invalid date";
+        if (o.deadline?.toDate) {
+          try { 
+            deadlineText = o.deadline.toDate().toLocaleString(); 
+          } catch (e) {
+            deadlineText = "Invalid date";
+          }
+        } else if (o.deadline) {
+          try {
+            deadlineText = new Date(o.deadline).toLocaleString();
+          } catch (e) {
+            deadlineText = "Invalid date";
+          }
+        }
+
+        const status = o.status ?? "pending";
+
+        list.innerHTML += `
+          <div class="order-item">
+            <b>${o.bookName ?? "Unnamed Order"}</b><br/>
+            Buyers: ${buyers}<br/>
+            Status: ${status}<br/>
+            Deadline: ${deadlineText}<br/>
+            Created by: ${o.creatorEmail ?? "N/A"}<br/>
+            <button onclick="confirmVendor('${id}')">Confirm Vendor</button>
+            <button onclick="markCompleted('${id}')">Mark Completed</button>
+          </div><hr/>
+        `;
+      });
+    }, (error) => {
+      console.error("Orders listener error:", error);
+      document.getElementById("adminOrdersList").innerHTML = 
+        `<p style="color:red;">Error loading orders: ${error.message || "Unknown error"}</p>`;
+    });
   });
 });
 
-// Firestore mutation functions (fixed)
+// Firestore mutation functions
 window.confirmVendor = async function(id) {
-  await updateDoc(doc(window.firestoreDB, "groupOrders", id), { 
-    status: "vendor_confirmed",
-    confirmedAt: serverTimestamp()
-  }).catch(console.error);
+  try {
+    await updateDoc(doc(window.db, "groupOrders", id), { 
+      status: "vendor_confirmed",
+      confirmedAt: serverTimestamp()
+    });
+    console.log("Order confirmed:", id);
+  } catch (error) {
+    console.error("Confirm error:", error);
+    alert(`Failed to confirm: ${error.message || "Unknown error"}`);
+  }
 };
 
 window.markCompleted = async function(id) {
-  await updateDoc(doc(window.firestoreDB, "groupOrders", id), { 
-    status: "completed",
-    completedAt: serverTimestamp()
-  }).catch(console.error);
+  try {
+    await updateDoc(doc(window.db, "groupOrders", id), { 
+      status: "completed",
+      completedAt: serverTimestamp()
+    });
+    console.log("Order completed:", id);
+  } catch (error) {
+    console.error("Complete error:", error);
+    alert(`Failed to mark completed: ${error.message || "Unknown error"}`);
+  }
+};
+
+window.handleLogout = async () => {
+  try {
+    await signOut(window.auth);
+    window.location.href = "index.html";
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
 };
 </script>
+</body>
+</html>

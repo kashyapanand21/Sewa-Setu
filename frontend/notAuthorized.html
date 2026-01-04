@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Access Denied – Sewa Setu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ea4335 0%, #c5221f 100%);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 90%;
+      max-width: 500px;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    h1 {
+      color: #c5221f;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    p {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    button {
+      padding: 12px 24px;
+      background: #4285F4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="icon">🚫</div>
+    <h1>Access Denied</h1>
+    <p>
+      You do not have permission to access the Admin Panel.<br>
+      Only authorized team members and coordinators can access this area.
+    </p>
+    <button onclick="window.location.href='index.html'">Return to Home</button>
+  </div>
+</body>
+</html>

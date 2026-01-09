@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,25 +11,30 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
             min-height: 100vh;
             padding: 20px;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
+
         .header {
             text-align: center;
             color: white;
             margin-bottom: 30px;
         }
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
         }
+
         .user-info {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -39,6 +45,7 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .card {
             background: white;
             border-radius: 12px;
@@ -46,6 +53,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             margin-bottom: 20px;
         }
+
         .card h2 {
             color: #333;
             margin-bottom: 20px;
@@ -53,9 +61,11 @@
             border-bottom: 3px solid #34a853;
             padding-bottom: 10px;
         }
+
         .form-group {
             margin-bottom: 15px;
         }
+
         .form-group label {
             display: block;
             font-weight: 600;
@@ -63,17 +73,24 @@
             margin-bottom: 6px;
             font-size: 0.9rem;
         }
-        .form-group input, .form-group select, .form-group textarea {
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1rem;
         }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #34a853;
         }
+
         button {
             width: 100%;
             padding: 14px;
@@ -86,34 +103,43 @@
             cursor: pointer;
             margin-top: 10px;
         }
+
         button:hover {
             opacity: 0.9;
         }
+
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        .order-item, .slot-item {
+
+        .order-item,
+        .slot-item {
             padding: 15px;
             background: #f9f9f9;
             border-left: 5px solid #34a853;
             margin-top: 12px;
             border-radius: 6px;
         }
-        .order-item button, .slot-item button {
+
+        .order-item button,
+        .slot-item button {
             width: auto;
             padding: 8px 16px;
             margin-top: 8px;
             margin-right: 8px;
         }
+
         .hidden {
             display: none;
         }
+
         .content-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
+
         @media (max-width: 1024px) {
             .content-grid {
                 grid-template-columns: 1fr;
@@ -121,6 +147,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -156,11 +183,12 @@
                 </div>
                 <div class="form-group">
                     <label for="vendorLocation">Location/Address *</label>
-                    <textarea id="vendorLocation" required placeholder="e.g., Ashok Rajpath, near NIT Main Gate"></textarea>
+                    <textarea id="vendorLocation" required
+                        placeholder="e.g., Ashok Rajpath, near NIT Main Gate"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="vendorPhone">Phone Number *</label>
-                    <input type="tel" id="vendorPhone" required placeholder="e.g., +91-9876543210">
+                    <input type="tel" id="vendorPhone" required placeholder="e.g., +91-55555 55555">
                 </div>
                 <div class="form-group">
                     <label for="vendorTimings">Shop Timings *</label>
@@ -213,14 +241,23 @@
 
     <script type="module" src="firebase.js"></script>
     <script type="module" src="serviceSlots.js"></script>
-    
+
     <script type="module">
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { createSlot } from "./serviceSlots.js";
 
         let currentUser = null;
         let vendorData = null;
+
+        // Structured logging
+        function logEvent(state, data) {
+            console.log(JSON.stringify({
+                state,
+                ...data,
+                time: new Date().toISOString()
+            }));
+        }
 
         window.handleLogout = async () => {
             try {
@@ -263,10 +300,19 @@
                     const vendorDoc = await getDoc(doc(window.db, "vendors", user.uid));
                     if (vendorDoc.exists()) {
                         vendorData = vendorDoc.data();
+
+                        // Enforce Location Requirement
+                        if (!vendorData.lat || !vendorData.lng) {
+                            alert("Location required! Redirecting to map...");
+                            window.location.href = "vendorsMap.html?select=true";
+                            return;
+                        }
+
                         // Show dashboard, hide registration
                         document.getElementById("registrationCard").classList.add("hidden");
                         document.getElementById("vendorDashboard").classList.remove("hidden");
                         initVendorDashboard();
+                        logEvent("vendor_dashboard_loaded", { uid: user.uid });
                     } else {
                         // Show registration, hide dashboard
                         document.getElementById("registrationCard").classList.remove("hidden");
@@ -283,7 +329,7 @@
         function initRegistration() {
             document.getElementById("vendorForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
-                
+
                 const name = document.getElementById("vendorName").value.trim();
                 const category = document.getElementById("vendorCategory").value;
                 const location = document.getElementById("vendorLocation").value.trim();
@@ -309,15 +355,16 @@
                         shopTimings: timings,
                         email: currentUser.email || "N/A",
                         createdAt: new Date(),
-                        lastLogin: new Date()
+                        lastLogin: new Date(),
+                        // lat/lng not set here, will force redirect
                     }, { merge: true });
 
-                    alert("✅ Vendor registered successfully!");
-                    location.reload();
+                    logEvent("vendor_registered", { uid: currentUser.uid, name });
+                    alert("✅ Vendor registered! Please set your location on the next page.");
+                    window.location.href = "vendorsMap.html?select=true";
                 } catch (error) {
                     console.error("Registration error:", error);
                     alert(`❌ Failed: ${error.message || "Unknown error"}`);
-                } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = "Register Vendor";
                 }
@@ -341,18 +388,27 @@
                     const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline || Date.now());
                     const status = order.status || "open";
 
+                    // Ownership visual check
+                    const isMyOrder = order.vendorId === currentUser.uid;
+                    const isClaimable = status === "open" && !order.vendorId;
+
                     const orderDiv = document.createElement("div");
                     orderDiv.className = "order-item";
+                    orderDiv.style.borderLeftColor = isMyOrder ? "#34a853" : (isClaimable ? "#fbbc05" : "#ccc");
+
                     orderDiv.innerHTML = `
-                        <b>${order.bookName || "N/A"}</b><br/>
+                        <b>${order.bookTitle || order.bookName || "N/A"}</b><br/>
+                        <small>ID: ${orderId.slice(0, 6)}...</small><br/>
                         Buyers: ${order.currentQuantity || 0}/${order.targetQuantity || "N/A"}<br/>
-                        Status: ${status}<br/>
+                        Status: <b>${status}</b><br/>
                         Deadline: ${deadline.toLocaleString()}<br/>
-                        Created by: ${order.creatorEmail || "N/A"}<br/>
-                        ${status === "open" ? 
-                          `<button onclick="confirmOrder('${orderId}')" style="background:#4285F4;">Confirm Vendor</button>` : ''}
-                        ${status === "vendor_confirmed" ? 
-                          `<button onclick="markCompleted('${orderId}')" style="background:#34a853;">Mark Completed</button>` : ''}
+                        ${order.vendorId ? (isMyOrder ? "✅ Assigned to you" : "🔒 Assigned to another vendor") : "⭕ Open for confirmation"}<br/>
+                        
+                        ${isClaimable ?
+                            `<button onclick="confirmOrder('${orderId}')" style="background:#4285F4;">Confirm Vendor</button>` : ''}
+                        
+                        ${isMyOrder && status === "vendor_confirmed" ?
+                            `<button onclick="markCompleted('${orderId}')" style="background:#34a853;">Mark Completed</button>` : ''}
                     `;
                     list.appendChild(orderDiv);
                 });
@@ -361,7 +417,13 @@
             // Create slot form
             document.getElementById("slotForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
-                
+
+                // Double check location before allowing creation
+                if (!vendorData || !vendorData.lat || !vendorData.lng) {
+                    alert("Location not verified! Cannot create slots.");
+                    return;
+                }
+
                 const serviceType = document.getElementById("serviceType").value;
                 const timeSlot = document.getElementById("timeSlot").value.trim();
                 const minParticipants = parseInt(document.getElementById("minParticipants").value);
@@ -383,10 +445,6 @@
                 createBtn.textContent = "Creating...";
 
                 try {
-                    if (typeof createSlot !== "function") {
-                        throw new Error("Slot creation function not available");
-                    }
-
                     const slotId = await createSlot(
                         currentUser.uid,
                         serviceType,
@@ -396,14 +454,16 @@
                     );
 
                     if (slotId) {
-                        alert(`✅ Slot created successfully! Slot ID: ${slotId}`);
+                        logEvent("slot_created", { slotId, vendorId: currentUser.uid });
+                        alert(`✅ Slot created successfully!`);
                         document.getElementById("slotForm").reset();
                     } else {
-                        alert("❌ Failed to create slot");
+                        throw new Error("Slot ID returned null");
                     }
                 } catch (error) {
                     console.error("Slot creation error:", error);
                     alert(`❌ Failed: ${error.message || "Unknown error"}`);
+                    logEvent("slot_creation_failed", { error: error.message });
                 } finally {
                     createBtn.disabled = false;
                     createBtn.textContent = "Create Slot";
@@ -416,31 +476,83 @@
             document.getElementById("slotDeadline").min = now.toISOString().slice(0, 16);
         }
 
+        // Transactional Confirm
         window.confirmOrder = async (orderId) => {
+            if (!currentUser) return;
+
             try {
-                await updateDoc(doc(window.db, "groupOrders", orderId), {
-                    status: "vendor_confirmed",
-                    confirmedAt: new Date()
+                const orderRef = doc(window.db, "groupOrders", orderId);
+
+                await runTransaction(window.db, async (transaction) => {
+                    const orderDoc = await transaction.get(orderRef);
+                    if (!orderDoc.exists()) throw new Error("Order does not exist");
+
+                    const data = orderDoc.data();
+
+                    // Permission Check
+                    if (data.vendorId && data.vendorId !== currentUser.uid) {
+                        throw new Error("Order already claimed by another vendor");
+                    }
+
+                    if (data.status !== "open") {
+                        throw new Error("Order is not open for confirmation");
+                    }
+
+                    transaction.update(orderRef, {
+                        status: "vendor_confirmed",
+                        vendorId: currentUser.uid,
+                        confirmedAt: new Date(),
+                        vendorLocation: {
+                            lat: vendorData.lat,
+                            lng: vendorData.lng
+                        }
+                    });
                 });
-                alert("✅ Order confirmed!");
+
+                logEvent("order_confirmed", { orderId, vendorId: currentUser.uid });
+                alert("✅ Order confirmed! It is now assigned to you.");
             } catch (error) {
                 console.error("Confirm error:", error);
-                alert(`❌ Failed: ${error.message || "Unknown error"}`);
+                logEvent("permission_denied", { action: "confirm_order", reason: error.message, uid: currentUser.uid });
+                alert(`❌ Failed: ${error.message}`);
             }
         };
 
+        // Strict Completion
         window.markCompleted = async (orderId) => {
+            if (!currentUser) return;
+
             try {
-                await updateDoc(doc(window.db, "groupOrders", orderId), {
+                const orderRef = doc(window.db, "groupOrders", orderId);
+                const snap = await getDoc(orderRef);
+
+                if (!snap.exists()) {
+                    alert("Order not found");
+                    return;
+                }
+
+                const data = snap.data();
+
+                // Strict Ownership Check
+                if (data.vendorId !== currentUser.uid) {
+                    logEvent("permission_denied", { action: "complete_order", expected: data.vendorId, actual: currentUser.uid });
+                    alert("⛔ You do not have permission to complete this order.");
+                    return;
+                }
+
+                await updateDoc(orderRef, {
                     status: "completed",
                     completedAt: new Date()
                 });
+
+                logEvent("order_completed", { orderId, vendorId: currentUser.uid });
                 alert("✅ Order marked as completed!");
             } catch (error) {
                 console.error("Complete error:", error);
-                alert(`❌ Failed: ${error.message || "Unknown error"}`);
+                alert(`❌ Failed: ${error.message}`);
             }
         };
     </script>
 </body>
+
 </html>

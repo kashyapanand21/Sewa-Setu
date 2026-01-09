@@ -303,7 +303,35 @@
                         vendorData = vendorDoc.data();
 
                         // Strict Verification Check: Must have lat/lng
-                        if (!vendorData.lat || !vendorData.lng) {
+                        // Strict Verification Check: Must have lat/lng
+                        // Loop Fix: Check if we have a pending location in localStorage to save
+                        const pendingLoc = localStorage.getItem('selectedVendorLocation');
+                        if (pendingLoc) {
+                            try {
+                                const loc = JSON.parse(pendingLoc);
+                                console.log("Updating vendor location from map return...", loc);
+                                await setDoc(doc(window.db, "vendors", user.uid), {
+                                    lat: loc.lat,
+                                    lng: loc.lng,
+                                    updatedAt: new Date()
+                                }, { merge: true });
+
+                                // Update local data to prevent redirect
+                                vendorData.lat = loc.lat;
+                                vendorData.lng = loc.lng;
+                                localStorage.removeItem('selectedVendorLocation');
+                                localStorage.setItem("vendorLocated", "true");
+
+                                console.log({ state: "vendor_pin_saved", uid: user.uid, lat: loc.lat, lng: loc.lng, popupLoop: false, time: new Date() });
+                            } catch (e) {
+                                console.error("Failed to save location on return:", e);
+                            }
+                        }
+
+                        // Check if session flag says we are located (latency compensation)
+                        const sessionLocated = localStorage.getItem("vendorLocated") === "true";
+
+                        if ((!vendorData.lat || !vendorData.lng) && !sessionLocated) {
                             console.log({ state: "vendor_denied", uid: user.uid, reason: "not_verified_or_not_located", time: new Date() });
                             alert("⚠️ Verification Required: You must pin your shop location on the map to continue.");
 

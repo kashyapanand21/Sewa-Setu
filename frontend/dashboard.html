@@ -6,10 +6,32 @@
   <title>Sewa Setu – Student Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      /* Prevent body scroll, use inner scroll */
+    }
+
     body {
       font-family: Arial;
       background: #f5f5f5;
-      padding: 20px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-info {
+      background: #e8f0fe;
+      padding: 10px;
+      margin: 20px 20px 10px 20px;
+      border-radius: 6px;
+      flex-shrink: 0;
     }
 
     .card {
@@ -17,21 +39,28 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
+      margin: 0 20px 20px 20px;
+      /* Scroll content inside card */
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
+    /* Additional responsiveness for the card content */
     input,
     select {
       width: 100%;
+      max-width: 100%;
       padding: 10px;
       margin-top: 10px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      box-sizing: border-box;
     }
 
     button {
       width: 100%;
+      max-width: 100%;
       padding: 12px;
       background: #4285F4;
       color: white;
@@ -40,6 +69,8 @@
       font-weight: bold;
       cursor: pointer;
       margin-top: 15px;
+      min-height: 48px;
+      /* Touch target size */
     }
 
     button:hover {
@@ -76,15 +107,10 @@
       transition: width 0.3s;
     }
 
-    .user-info {
-      background: #e8f0fe;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-    }
-
     .service-tabs {
       display: flex;
+      flex-wrap: wrap;
+      /* Allow wrapping */
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -96,6 +122,13 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
+      flex: 1 1 auto;
+      /* Grow and shrink */
+      text-align: center;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .service-tab.active {
@@ -109,6 +142,17 @@
 
     .service-content.active {
       display: block;
+    }
+
+    /* Mobile handling: stack vertically if screen is too small */
+    @media (max-width: 480px) {
+      .service-tabs {
+        flex-direction: column;
+      }
+
+      .service-tab {
+        width: 100%;
+      }
     }
   </style>
   <script type="module" src="firebase.js"></script>

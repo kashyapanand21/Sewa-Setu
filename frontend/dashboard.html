@@ -6,10 +6,32 @@
   <title>Sewa Setu – Student Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      /* Prevent overall body scroll, manage in card */
+      overflow: hidden;
+    }
+
     body {
       font-family: Arial;
       background: #f5f5f5;
-      padding: 20px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-info {
+      background: #e8f0fe;
+      padding: 10px;
+      margin: 20px 20px 10px 20px;
+      border-radius: 6px;
+      flex-shrink: 0;
     }
 
     .card {
@@ -17,21 +39,29 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
+      margin: 0 20px 20px 20px;
+      overflow-y: auto;
+      /* Scrollable content area */
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
+    /* Responsive Inputs & Buttons */
     input,
     select {
       width: 100%;
+      max-width: 100%;
+      /* Prevent overflow */
       padding: 10px;
       margin-top: 10px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      box-sizing: border-box;
     }
 
     button {
       width: 100%;
+      max-width: 100%;
       padding: 12px;
       background: #4285F4;
       color: white;
@@ -40,6 +70,8 @@
       font-weight: bold;
       cursor: pointer;
       margin-top: 15px;
+      min-height: 48px;
+      /* Touch target size */
     }
 
     button:hover {
@@ -59,6 +91,8 @@
       margin-top: 12px;
       border-radius: 6px;
       box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+      word-wrap: break-word;
+      /* Prevent long text overflow */
     }
 
     .progress {
@@ -76,15 +110,10 @@
       transition: width 0.3s;
     }
 
-    .user-info {
-      background: #e8f0fe;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-    }
-
     .service-tabs {
       display: flex;
+      flex-wrap: wrap;
+      /* Critical for small screens */
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -96,6 +125,13 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
+      flex: 1 1 auto;
+      /* Responsive flex growing */
+      text-align: center;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .service-tab.active {
@@ -110,9 +146,30 @@
     .service-content.active {
       display: block;
     }
+
+    /* Mobile handling */
+    @media (max-width: 480px) {
+      .service-tabs {
+        flex-direction: column;
+        /* Stack tabs on very small screens */
+      }
+
+      .service-tab {
+        width: 100%;
+      }
+
+      .card {
+        margin: 10px;
+        padding: 15px;
+      }
+
+      .user-info {
+        margin: 10px;
+      }
+    }
   </style>
+
   <script type="module" src="firebase.js"></script>
-  <script type="module" src="serviceSlots.js"></script>
 </head>
 
 <body>
@@ -161,8 +218,12 @@
 
   <script type="module">
     import { collection, addDoc, onSnapshot, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { listenServiceSlots, bookSlot } from "./serviceSlots.js";
+    import { generateDiscountReport } from "./googleBooks.js";
+
+    // Global exposure for critical console testing (Requirement 9 & 10)
+    window.generateDiscountReport = generateDiscountReport;
 
     let currentUser = null;
 
@@ -202,7 +263,7 @@
         document.getElementById("userInfo").innerHTML = `
       Logged in as: <strong>${user.email || "N/A"}</strong>
       <button onclick="window.auth.signOut().then(() => location.href='index.html')" 
-              style="padding:4px 8px; margin-left:10px; background:#ea4335;">Logout</button>
+              style="padding:4px 8px; margin-left:10px; background:#ea4335; width:auto; min-height:auto;">Logout</button>
     `;
 
         document.getElementById("createOrderBtn").disabled = false;
@@ -280,7 +341,11 @@
         snapshot.forEach(doc => {
           const order = doc.data();
           const orderId = doc.id;
-          const percent = Math.min(((order.currentQuantity || 0) / (order.targetQuantity || 1)) * 100, 100);
+          // Fallbacks for null safety
+          const currentQ = order.currentQuantity || 0;
+          const targetQ = order.targetQuantity || 1;
+
+          const percent = Math.min((currentQ / targetQ) * 100, 100);
           const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline || Date.now());
           const hasJoined = currentUser && order.participants && order.participants.includes(currentUser.uid);
 
@@ -288,15 +353,15 @@
           orderDiv.className = "order-item";
           orderDiv.innerHTML = `
         <b>${order.bookName || "N/A"}</b><br/>
-        Buyers: ${order.currentQuantity || 0}/${order.targetQuantity || "N/A"}<br/>
+        Buyers: ${currentQ}/${targetQ}<br/>
         Status: ${order.status || "open"}<br/>
         Deadline: ${deadline.toLocaleString()}<br/>
         Created by: ${order.creatorEmail || "N/A"}<br/>
         <div class="progress">
           <div class="bar" style="width:${percent}%"></div>
         </div>
-        ${!hasJoined && (order.currentQuantity || 0) < (order.targetQuantity || 0) ?
-              `<button class="join-btn" onclick="joinOrder('${orderId}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Join Order</button>` :
+        ${!hasJoined && currentQ < targetQ ?
+              `<button class="join-btn" onclick="joinOrder('${orderId}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853; min-height:auto;">Join Order</button>` :
               hasJoined ? '<p style="color:#34a853; margin-top:8px;">✓ You joined this order</p>' : ''}
       `;
           list.appendChild(orderDiv);
@@ -305,10 +370,7 @@
     }
 
     window.joinOrder = async (orderId) => {
-      if (!currentUser) {
-        alert("Must be logged in");
-        return;
-      }
+      if (!currentUser) alert("Must be logged in");
 
       try {
         const orderRef = doc(window.db, "groupOrders", orderId);
@@ -320,7 +382,7 @@
 
         const orderData = orderSnap.data();
         if (orderData.participants && orderData.participants.includes(currentUser.uid)) {
-          alert("You have already joined this order");
+          alert("Already joined");
           return;
         }
 
@@ -328,8 +390,7 @@
           currentQuantity: increment(1),
           participants: [...(orderData.participants || []), currentUser.uid]
         });
-
-        alert("✅ Successfully joined the order!");
+        alert("✅ Successfully joined!");
       } catch (error) {
         alert(`❌ Failed to join: ${error.message}`);
       }
@@ -358,15 +419,17 @@
           const deadline = slot.deadline?.toMillis ? new Date(slot.deadline.toMillis()) :
             (typeof slot.deadline === 'number' ? new Date(slot.deadline) : new Date());
           const hasBooked = slot.studentUIDs && slot.studentUIDs.includes(currentUser?.uid);
+          const currentP = slot.participants || 0;
+          const minP = slot.minParticipants || 0;
 
           slotDiv.innerHTML = `
         <b>${serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Service</b><br/>
         Time Slot: ${slot.timeSlot || "N/A"}<br/>
-        Participants: ${slot.participants || 0}/${slot.minParticipants || "N/A"}<br/>
+        Participants: ${currentP}/${minP}<br/>
         Deadline: ${deadline.toLocaleString()}<br/>
         Status: ${slot.status || "open"}<br/>
         ${!hasBooked && slot.status === "open" ?
-              `<button onclick="bookServiceSlot('${slot.id}', '${serviceType}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Book Slot</button>` :
+              `<button onclick="bookServiceSlot('${slot.id}', '${serviceType}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853; min-height:auto;">Book Slot</button>` :
               hasBooked ? '<p style="color:#34a853; margin-top:8px;">✓ You booked this slot</p>' : ''}
       `;
           container.appendChild(slotDiv);
@@ -375,25 +438,13 @@
     }
 
     window.bookServiceSlot = async (slotId, serviceType) => {
-      if (!currentUser) {
-        alert("Must be logged in");
-        return;
-      }
-
-      if (typeof bookSlot !== "function") {
-        alert("Slot booking function not available");
-        return;
-      }
-
+      if (!currentUser) return alert("Must be logged in");
       try {
         const success = await bookSlot(slotId, currentUser.uid);
-        if (success) {
-          alert(`✅ Successfully booked ${serviceType} slot!`);
-        } else {
-          alert(`❌ Failed to book slot. It may be full or expired.`);
-        }
+        if (success) alert(`✅ Booked ${serviceType} slot!`);
+        else alert(`❌ Failed to book slot.`);
       } catch (error) {
-        alert(`❌ Error: ${error.message || "Unknown error"}`);
+        alert(`❌ Error: ${error.message}`);
       }
     };
 

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Sewa Setu – Entry Point</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,31 +17,36 @@
       align-items: center;
       min-height: 100vh;
     }
+
     .container {
       width: 90%;
       max-width: 500px;
       background: white;
       padding: 40px;
       border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
       text-align: center;
     }
+
     h1 {
       color: #333;
       margin-bottom: 10px;
       font-size: 32px;
     }
+
     .subtitle {
       color: #666;
       margin-bottom: 30px;
       font-size: 16px;
     }
+
     .role-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 15px;
       margin-top: 30px;
     }
+
     .role-btn {
       width: 100%;
       padding: 20px;
@@ -52,25 +58,31 @@
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
+
     .role-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
       opacity: 0.95;
     }
+
     .role-btn:active {
       transform: translateY(0);
     }
+
     .role-btn.student {
       background: #4285F4;
     }
+
     .role-btn.vendor {
       background: #34a853;
     }
+
     .role-btn.admin {
       background: #ea4335;
     }
+
   </style>
 </head>
 
@@ -78,7 +90,7 @@
   <div class="container">
     <h1>Sewa Setu</h1>
     <p class="subtitle">Select your role to continue</p>
-    
+
     <div class="role-grid" id="roleSelection">
       <button class="role-btn student" data-role="student" data-route="studentPortal.html">
         Student
@@ -89,37 +101,41 @@
       <button class="role-btn admin" data-role="admin" data-route="admin.html">
         Admin
       </button>
+
     </div>
   </div>
 
   <!-- Load Firebase first -->
   <script type="module" src="firebase.js"></script>
-  
-  <!-- Load modules -->
+
+  <!-- Load modules and expose globally for testing -->
   <script type="module">
     import { generateDiscountReport } from "./googleBooks.js";
     import { createSlot, bookSlot, flipExpiredSlots, listenServiceSlots } from "./serviceSlots.js";
-    
+
     // Expose functions to window for console testing
     window.generateDiscountReport = generateDiscountReport || null;
     window.createSlot = createSlot || null;
     window.bookSlot = bookSlot || null;
     window.flipExpiredSlots = flipExpiredSlots || null;
     window.listenServiceSlots = listenServiceSlots || null;
-    
+
     console.log("✅ Modules loaded and exposed to window");
   </script>
 
   <script type="module">
-    // Handle role selection - simple routing
+    // Handle role selection - robust routing
     document.querySelectorAll(".role-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const route = btn.getAttribute("data-route");
         if (route) {
           window.location.href = route;
+        } else {
+          console.error("Missing route for button");
         }
       });
     });
   </script>
 </body>
+
 </html>

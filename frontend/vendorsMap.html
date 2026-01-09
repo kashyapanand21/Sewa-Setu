@@ -1,98 +1,80 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vendor Locator – Ashok Rajpath</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vendor Locator – Ashok Rajpath</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <script type="module" src="firebase.js"></script>
-  <script type="module" src="serviceSlots.js"></script>
+<script type="module" src="firebase.js"></script>
+<script type="module" src="serviceSlots.js"></script>
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    #map {
-      width: 100%;
-      height: 70vh;
-      margin-bottom: 10px;
-    }
-  </style>
+<style>
+body { font-family: Arial; background:#f5f5f5; padding:20px; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+#map { width:100%; height:70vh; margin-bottom:10px; }
+</style>
 </head>
 
 <body>
-  <div class="card">
-    <h2 id="pageTitle">Vendor Locator – Ashok Rajpath</h2>
-    <div id="searchContainer">
-      <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;" />
-    </div>
-    <div id="map"></div>
-    <div id="vendorDetails" style="font-size:14px;"></div>
-
-    <div id="selectionButtons">
-      <button onclick="window.clearSelection()">Remove Selected Location</button>
-      <button id="confirmBtn" onclick="window.confirmLocation()"
-        style="display:none;background:#34a853;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
-        ✅ Confirm Selected Location
-      </button>
-      <button id="addVendorBtn" onclick="window.addVendor()" style="display:none;">Add Vendor at Selected
-        Location</button>
-    </div>
+<div class="card">
+  <h2 id="pageTitle">Vendor Locator – Ashok Rajpath</h2>
+  <div id="searchContainer">
+    <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;"/>
   </div>
+  <div id="map"></div>
+  <div id="vendorDetails" style="font-size:14px;"></div>
 
-  <script type="module">
-    import { db, addDoc, onSnapshot, collection } from "./firebase.js";
+  <div id="selectionButtons">
+    <button onclick="window.clearSelection()">Remove Selected Location</button>
+    <button id="confirmBtn" onclick="window.confirmLocation()" style="display:none;background:#34a853;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+      ✅ Confirm Selected Location
+    </button>
+    <button id="addVendorBtn" onclick="window.addVendor()" style="display:none;">Add Vendor at Selected Location</button>
+  </div>
+</div>
 
-    // Check if we're in selection mode (for vendor registration)
-    const urlParams = new URLSearchParams(window.location.search);
-    const isSelectionMode = urlParams.get('select') === 'true';
+<script type="module">
+import { db, addDoc, onSnapshot, collection } from "./firebase.js";
 
-    const map = L.map('map').setView([25.6207, 85.1724], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// Check if we're in selection mode (for vendor registration)
+const urlParams = new URLSearchParams(window.location.search);
+const isSelectionMode = urlParams.get('select') === 'true';
 
-    let selectedLat = null;
-    let selectedLng = null;
-    let selectionMarker = null;
+const map = L.map('map').setView([25.6207, 85.1724], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    // Update UI based on mode
-    if (isSelectionMode) {
-      document.getElementById('pageTitle').textContent = 'Select Your Store Location';
-      document.getElementById('searchContainer').style.display = 'none';
-      document.getElementById('vendorDetails').style.display = 'none';
-      document.getElementById('confirmBtn').style.display = 'inline-block';
-      document.getElementById('addVendorBtn').style.display = 'none';
-    } else {
-      document.getElementById('confirmBtn').style.display = 'none';
-      document.getElementById('addVendorBtn').style.display = 'inline-block';
-    }
+let selectedLat = null;
+let selectedLng = null;
+let selectionMarker = null;
 
-    // Single marker selection
-    map.on("click", (e) => {
-      if (selectionMarker) map.removeLayer(selectionMarker);
-      selectedLat = e.latlng.lat;
-      selectedLng = e.latlng.lng;
-      selectionMarker = L.marker([selectedLat, selectedLng]).addTo(map)
-        .bindPopup("Location selected ✔").openPopup();
-      console.log("📍 Selected:", selectedLat, selectedLng);
+// Update UI based on mode
+if (isSelectionMode) {
+  document.getElementById('pageTitle').textContent = 'Select Your Store Location';
+  document.getElementById('searchContainer').style.display = 'none';
+  document.getElementById('vendorDetails').style.display = 'none';
+  document.getElementById('confirmBtn').style.display = 'inline-block';
+  document.getElementById('addVendorBtn').style.display = 'none';
+} else {
+  document.getElementById('confirmBtn').style.display = 'none';
+  document.getElementById('addVendorBtn').style.display = 'inline-block';
+}
 
-      // Show confirmation message in selection mode
-      if (isSelectionMode) {
-        document.getElementById('vendorDetails').style.display = 'block';
-        document.getElementById('vendorDetails').innerHTML = `
+// Single marker selection
+map.on("click", (e) => {
+  if (selectionMarker) map.removeLayer(selectionMarker);
+  selectedLat = e.latlng.lat;
+  selectedLng = e.latlng.lng;
+  selectionMarker = L.marker([selectedLat, selectedLng]).addTo(map)
+    .bindPopup("Location selected ✔").openPopup();
+  console.log("📍 Selected:", selectedLat, selectedLng);
+  
+  // Show confirmation message in selection mode
+  if (isSelectionMode) {
+    document.getElementById('vendorDetails').style.display = 'block';
+    document.getElementById('vendorDetails').innerHTML = `
       <div style="background:#e8f5e9;padding:10px;border-radius:6px;margin-top:10px;">
         <b>✅ Location Selected!</b><br/>
         Latitude: ${selectedLat.toFixed(6)}<br/>
@@ -100,143 +82,122 @@
         <small>Click "Confirm Selected Location" to use this location</small>
       </div>
     `;
-      }
-    });
+  }
+});
 
-    // Remove selection manually
-    window.clearSelection = function () {
-      if (selectionMarker) {
-        map.removeLayer(selectionMarker);
-        selectionMarker = null;
-        selectedLat = null;
-        selectedLng = null;
-        if (isSelectionMode) {
-          document.getElementById('vendorDetails').style.display = 'none';
-        }
-        console.log("Selection cleared ✔");
-      }
-    };
-
-    // Confirm location for vendor registration
-    window.confirmLocation = async function () {
-      if (!selectedLat || !selectedLng) {
-        alert("Please select a location on the map first ❌");
-        return;
-      }
-
-      if (!window.auth.currentUser) {
-        alert("Auth lost. Please login again.");
-        window.location.href = "vendorPortal.html";
-        return;
-      }
-
-      const uid = window.auth.currentUser.uid;
-      const btn = document.getElementById('confirmBtn');
-      btn.innerText = "Saving...";
-      btn.disabled = true;
-
-      try {
-        // Direct update to Firestore
-        await window.updateDoc(window.doc(window.db, "vendors", uid), {
-          lat: selectedLat,
-          lng: selectedLng,
-          updatedAt: new Date()
-        });
-
-        console.log("Location saved to profile ✔");
-        alert("Location confirmed! Redirecting to dashboard...");
-        window.location.href = "vendors.html";
-
-      } catch (e) {
-        console.error("Location save failed:", e);
-        alert("Failed to save location. Try again.");
-        btn.innerText = "✅ Confirm Selected Location";
-        btn.disabled = false;
-      }
-    };
-
-    // Add vendor using selected coords (Admin/Debug only)
-    window.addVendor = async function () {
-      if (!selectedLat || !selectedLng) {
-        alert("Select a location first ❌");
-        return;
-      }
-      try {
-        const ref = await addDoc(collection(db, "vendors"), {
-          name: "Co Shop Test",
-          category: "Books",
-          phone: "0000000000",
-          timings: "N/A",
-          lat: selectedLat,
-          lng: selectedLng,
-          createdAt: new Date(),
-          details: {}
-        });
-        alert("Vendor added ✔");
-        console.log("Vendor written to Firestore ✔ ID:", ref.id);
-      } catch (e) {
-        console.error("Vendor write failed ❌", e);
-      }
-    };
-
-    // Render vendor pins (skip in selection mode)
-    let vendorMarkers = [];
-    function clearVendorMarkers() {
-      vendorMarkers.forEach(m => map.removeLayer(m));
-      vendorMarkers = [];
+// Remove selection manually
+window.clearSelection = function() {
+  if (selectionMarker) {
+    map.removeLayer(selectionMarker);
+    selectionMarker = null;
+    selectedLat = null;
+    selectedLng = null;
+    if (isSelectionMode) {
+      document.getElementById('vendorDetails').style.display = 'none';
     }
+    console.log("Selection cleared ✔");
+  }
+};
 
-    // Only load vendors if not in selection mode
-    if (!isSelectionMode) {
-      onSnapshot(collection(db, "vendors"), (snap) => {
-        clearVendorMarkers();
-        snap.forEach(d => {
-          const v = d.data();
-          if (!v.lat || !v.lng) {
-            console.warn("Skipping vendor (missing coords):", d.id, v);
-            return;
-          }
-          const m = L.marker([v.lat, v.lng]).addTo(map);
-          m.vendorData = v; // attach data for search filtering
-          m.on("click", () => {
-            document.getElementById("vendorDetails").innerHTML = `
+// Confirm location for vendor registration
+window.confirmLocation = function() {
+  if (!selectedLat || !selectedLng) {
+    alert("Please select a location on the map first ❌");
+    return;
+  }
+  
+  // Save coordinates to localStorage
+  localStorage.setItem('selectedVendorLocation', JSON.stringify({
+    lat: selectedLat,
+    lng: selectedLng
+  }));
+  
+  // Redirect back to vendor form
+  const returnUrl = localStorage.getItem('vendorFormReturnUrl') || 'vendors.html';
+  localStorage.removeItem('vendorFormReturnUrl');
+  window.location.href = returnUrl;
+};
+
+// Add vendor using selected coords
+window.addVendor = async function() {
+  if (!selectedLat || !selectedLng) {
+    alert("Select a location first ❌");
+    return;
+  }
+  try {
+    await addDoc(collection(db, "vendors"), {
+      name: "Co Shop Test",
+      category: "Books",
+      phone: "0000000000",
+      timings: "N/A",
+      lat: selectedLat,
+      lng: selectedLng,
+      createdAt: new Date()
+    });
+    alert("Vendor added ✔");
+    console.log("Vendor written to Firestore ✔");
+  } catch (e) {
+    console.error("Vendor write failed ❌", e);
+  }
+};
+
+// Render vendor pins (skip in selection mode)
+let vendorMarkers = [];
+function clearVendorMarkers() {
+  vendorMarkers.forEach(m => map.removeLayer(m));
+  vendorMarkers = [];
+}
+
+// Only load vendors if not in selection mode
+if (!isSelectionMode) {
+  onSnapshot(collection(db, "vendors"), (snap) => {
+  clearVendorMarkers();
+  snap.forEach(d => {
+    const v = d.data();
+    if (!v.lat || !v.lng) {
+      console.warn("Skipping vendor (missing coords):", d.id, v);
+      return;
+    }
+    const m = L.marker([v.lat, v.lng]).addTo(map);
+    m.vendorData = v; // attach data for search filtering
+    m.on("click", () => {
+      document.getElementById("vendorDetails").innerHTML = `
         <b>${v.name ?? "N/A"}</b><br/>
         Category: ${v.category ?? "N/A"}<br/>
         Phone: ${v.phone ?? "N/A"}<br/>
         Timings: ${v.timings ?? "N/A"}
       `;
-          });
-          vendorMarkers.push(m);
-        });
-      });
+    });
+    vendorMarkers.push(m);
+  });
+  });
 
-      // Search filter pins instantly
-      document.getElementById("searchBar").addEventListener("input", (e) => {
-        const term = e.target.value.toLowerCase();
-        vendorMarkers.forEach(m => {
-          const name = m.vendorData?.name?.toLowerCase() || "";
-          m.setOpacity(name.includes(term) ? 1 : 0);
-        });
-      });
+  // Search filter pins instantly
+  document.getElementById("searchBar").addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    vendorMarkers.forEach(m => {
+      const name = m.vendorData?.name?.toLowerCase() || "";
+      m.setOpacity(name.includes(term) ? 1 : 0);
+    });
+  });
+}
+
+// Test serviceSlots functions availability (skip in selection mode)
+if (!isSelectionMode) {
+  setTimeout(() => {
+    console.log("🧪 Testing serviceSlots functions...");
+    console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
+    console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
+    console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
+    console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
+    
+    if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
+      console.log("✅ All serviceSlots functions are available!");
+    } else {
+      console.error("❌ Some serviceSlots functions are missing!");
     }
-
-    // Test serviceSlots functions availability (skip in selection mode)
-    if (!isSelectionMode) {
-      setTimeout(() => {
-        console.log("🧪 Testing serviceSlots functions...");
-        console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
-        console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
-        console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
-        console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
-
-        if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
-          console.log("✅ All serviceSlots functions are available!");
-        } else {
-          console.error("❌ Some serviceSlots functions are missing!");
-        }
-      }, 1000); // Wait 1 second for modules to load
-    }
-  </script>
+  }, 1000); // Wait 1 second for modules to load
+}
+</script>
 </body>
-
 </html>

@@ -1,201 +1,292 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<title>Sewa Setu – Student Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-body { font-family: Arial; background:#f5f5f5; padding:20px; }
-.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:20px; }
-input, select { width:100%; padding:10px; margin-top:10px; border:1px solid #ccc; border-radius:6px; box-sizing: border-box; }
-button { width:100%; padding:12px; background:#4285F4; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:15px; }
-button:hover { opacity:0.9; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-.order-item, .slot-item { padding:15px; background:#fff; border-left:5px solid #4285F4; margin-top:12px; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,0.05); }
-.progress { background:#ddd; height:6px; border-radius:3px; margin-top:6px; }
-.bar { height:6px; width:0%; border-radius:3px; background:#4285F4; transition: width 0.3s; }
-.user-info { background: #e8f0fe; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
-.service-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-.service-tab { padding: 10px 20px; background: white; border: 2px solid #4285F4; border-radius: 6px; cursor: pointer; font-weight: bold; }
-.service-tab.active { background: #4285F4; color: white; }
-.service-content { display: none; }
-.service-content.active { display: block; }
-</style>
-<script type="module" src="firebase.js"></script>
-<script type="module" src="serviceSlots.js"></script>
+  <meta charset="UTF-8" />
+  <title>Sewa Setu – Student Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4285F4;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .order-item,
+    .slot-item {
+      padding: 15px;
+      background: #fff;
+      border-left: 5px solid #4285F4;
+      margin-top: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .progress {
+      background: #ddd;
+      height: 6px;
+      border-radius: 3px;
+      margin-top: 6px;
+    }
+
+    .bar {
+      height: 6px;
+      width: 0%;
+      border-radius: 3px;
+      background: #4285F4;
+      transition: width 0.3s;
+    }
+
+    .user-info {
+      background: #e8f0fe;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .service-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .service-tab {
+      padding: 10px 20px;
+      background: white;
+      border: 2px solid #4285F4;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .service-tab.active {
+      background: #4285F4;
+      color: white;
+    }
+
+    .service-content {
+      display: none;
+    }
+
+    .service-content.active {
+      display: block;
+    }
+  </style>
+  <script type="module" src="firebase.js"></script>
+  <script type="module" src="serviceSlots.js"></script>
 </head>
+
 <body>
-<div class="user-info" id="userInfo">Checking authentication...</div>
+  <div class="user-info" id="userInfo">Checking authentication...</div>
 
-<div class="card">
-  <h2>Student Dashboard</h2>
-  <div class="service-tabs">
-    <div class="service-tab active" data-service="books">📚 Books</div>
-    <div class="service-tab" data-service="laundry">👕 Laundry</div>
-    <div class="service-tab" data-service="printing">🖨️ Printing</div>
-    <div class="service-tab" data-service="stationery">📝 Stationery</div>
+  <div class="card">
+    <h2>Student Dashboard</h2>
+    <div class="service-tabs">
+      <div class="service-tab active" data-service="books">📚 Books</div>
+      <div class="service-tab" data-service="laundry">👕 Laundry</div>
+      <div class="service-tab" data-service="printing">🖨️ Printing</div>
+      <div class="service-tab" data-service="stationery">📝 Stationery</div>
+    </div>
+
+    <!-- Books Service -->
+    <div class="service-content active" id="booksContent">
+      <h3>Create Bulk Book Order</h3>
+      <input id="bookName" placeholder="Enter technical book name" />
+      <input id="targetQty" type="number" placeholder="Minimum students required" min="2" />
+      <input id="deadline" type="datetime-local" />
+      <button id="createOrderBtn" disabled>Create Group Order</button>
+      <div id="buttonStatus" style="margin-top:10px; color:#666; font-size:14px;">Waiting for authentication...</div>
+
+      <h3 style="margin-top:30px;">Active Group Orders</h3>
+      <div id="ordersList">Loading orders...</div>
+    </div>
+
+    <!-- Laundry Service -->
+    <div class="service-content" id="laundryContent">
+      <h3>Book Laundry Slot</h3>
+      <div id="laundrySlotsList">Loading available slots...</div>
+    </div>
+
+    <!-- Printing Service -->
+    <div class="service-content" id="printingContent">
+      <h3>Book Printing Slot</h3>
+      <div id="printingSlotsList">Loading available slots...</div>
+    </div>
+
+    <!-- Stationery Service -->
+    <div class="service-content" id="stationeryContent">
+      <h3>Book Stationery Slot</h3>
+      <div id="stationerySlotsList">Loading available slots...</div>
+    </div>
   </div>
 
-  <!-- Books Service -->
-  <div class="service-content active" id="booksContent">
-    <h3>Create Bulk Book Order</h3>
-    <input id="bookName" placeholder="Enter technical book name" />
-    <input id="targetQty" type="number" placeholder="Minimum students required" min="2" />
-    <input id="deadline" type="datetime-local" />
-    <button id="createOrderBtn" disabled>Create Group Order</button>
-    <div id="buttonStatus" style="margin-top:10px; color:#666; font-size:14px;">Waiting for authentication...</div>
-    
-    <h3 style="margin-top:30px;">Active Group Orders</h3>
-    <div id="ordersList">Loading orders...</div>
-  </div>
+  <script type="module">
+    import { collection, addDoc, onSnapshot, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { listenServiceSlots, bookSlot } from "./serviceSlots.js";
 
-  <!-- Laundry Service -->
-  <div class="service-content" id="laundryContent">
-    <h3>Book Laundry Slot</h3>
-    <div id="laundrySlotsList">Loading available slots...</div>
-  </div>
+    let currentUser = null;
 
-  <!-- Printing Service -->
-  <div class="service-content" id="printingContent">
-    <h3>Book Printing Slot</h3>
-    <div id="printingSlotsList">Loading available slots...</div>
-  </div>
+    // Service tab switching
+    document.querySelectorAll(".service-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        const service = tab.getAttribute("data-service");
+        document.querySelectorAll(".service-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".service-content").forEach(c => c.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(`${service}Content`).classList.add("active");
+      });
+    });
 
-  <!-- Stationery Service -->
-  <div class="service-content" id="stationeryContent">
-    <h3>Book Stationery Slot</h3>
-    <div id="stationerySlotsList">Loading available slots...</div>
-  </div>
-</div>
-
-<script type="module">
-import { collection, addDoc, onSnapshot, doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { listenServiceSlots, bookSlot } from "./serviceSlots.js";
-
-let currentUser = null;
-
-// Service tab switching
-document.querySelectorAll(".service-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    const service = tab.getAttribute("data-service");
-    document.querySelectorAll(".service-tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".service-content").forEach(c => c.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById(`${service}Content`).classList.add("active");
-  });
-});
-
-function waitForFirebase(callback) {
-  let attempts = 0;
-  const checkInterval = setInterval(() => {
-    attempts++;
-    if (window.auth && window.db) {
-      clearInterval(checkInterval);
-      callback();
-    } else if (attempts >= 20) {
-      clearInterval(checkInterval);
-      console.error("Firebase initialization timeout");
+    function waitForFirebase(callback) {
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (window.auth && window.db) {
+          clearInterval(checkInterval);
+          callback();
+        } else if (attempts >= 20) {
+          clearInterval(checkInterval);
+          console.error("Firebase initialization timeout");
+        }
+      }, 100);
     }
-  }, 100);
-}
 
-waitForFirebase(() => {
-  onAuthStateChanged(window.auth, async (user) => {
-    if (!user) {
-      window.location.href = "studentPortal.html";
-      return;
-    }
-    
-    currentUser = user;
-    document.getElementById("userInfo").innerHTML = `
+    waitForFirebase(() => {
+      onAuthStateChanged(window.auth, async (user) => {
+        if (!user) {
+          window.location.href = "studentPortal.html";
+          return;
+        }
+
+        currentUser = user;
+        document.getElementById("userInfo").innerHTML = `
       Logged in as: <strong>${user.email || "N/A"}</strong>
       <button onclick="window.auth.signOut().then(() => location.href='index.html')" 
               style="padding:4px 8px; margin-left:10px; background:#ea4335;">Logout</button>
     `;
-    
-    document.getElementById("createOrderBtn").disabled = false;
-    document.getElementById("buttonStatus").textContent = "Ready to create orders!";
-    document.getElementById("buttonStatus").style.color = "green";
-    
-    initBookOrders();
-    initSlotBooking("laundry", "laundrySlotsList");
-    initSlotBooking("printing", "printingSlotsList");
-    initSlotBooking("stationery", "stationerySlotsList");
-  });
-});
 
-// Book Orders
-function initBookOrders() {
-  document.getElementById("createOrderBtn").addEventListener("click", async () => {
-    if (!currentUser) {
-      alert("Please wait for authentication");
-      return;
-    }
-    
-    const bookName = document.getElementById("bookName").value.trim();
-    const targetQty = parseInt(document.getElementById("targetQty").value);
-    const deadlineInput = document.getElementById("deadline").value;
-    
-    if (!bookName || !targetQty || targetQty < 2 || !deadlineInput) {
-      alert("Please fill all fields correctly (target must be at least 2)");
-      return;
-    }
-    
-    const deadline = new Date(deadlineInput);
-    if (deadline <= new Date()) {
-      alert("Deadline must be in the future");
-      return;
-    }
-    
-    const btn = document.getElementById("createOrderBtn");
-    btn.disabled = true;
-    btn.textContent = "Creating...";
-    
-    try {
-      const orderRef = await addDoc(collection(window.db, "groupOrders"), {
-        bookName: bookName,
-        targetQuantity: targetQty,
-        currentQuantity: 1,
-        status: "open",
-        createdBy: currentUser.uid,
-        creatorEmail: currentUser.email || "N/A",
-        deadline: deadline,
-        createdAt: new Date(),
-        participants: [currentUser.uid]
+        document.getElementById("createOrderBtn").disabled = false;
+        document.getElementById("buttonStatus").textContent = "Ready to create orders!";
+        document.getElementById("buttonStatus").style.color = "green";
+
+        initBookOrders();
+        initSlotBooking("laundry", "laundrySlotsList");
+        initSlotBooking("printing", "printingSlotsList");
+        initSlotBooking("stationery", "stationerySlotsList");
       });
-      
-      alert(`✅ Order created successfully!\n\nOrder ID: ${orderRef.id}`);
-      document.getElementById("bookName").value = "";
-      document.getElementById("targetQty").value = "";
-      document.getElementById("deadline").value = "";
-    } catch (error) {
-      alert(`❌ Failed to create order:\n${error.message}`);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Create Group Order";
-    }
-  });
-  
-  onSnapshot(collection(window.db, "groupOrders"), (snapshot) => {
-    const list = document.getElementById("ordersList");
-    list.innerHTML = "";
-    
-    if (snapshot.empty) {
-      list.innerHTML = "<p>No active orders yet. Create one above!</p>";
-      return;
-    }
-    
-    snapshot.forEach(doc => {
-      const order = doc.data();
-      const orderId = doc.id;
-      const percent = Math.min(((order.currentQuantity || 0) / (order.targetQuantity || 1)) * 100, 100);
-      const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline || Date.now());
-      const hasJoined = currentUser && order.participants && order.participants.includes(currentUser.uid);
-      
-      const orderDiv = document.createElement("div");
-      orderDiv.className = "order-item";
-      orderDiv.innerHTML = `
+    });
+
+    // Book Orders
+    function initBookOrders() {
+      document.getElementById("createOrderBtn").addEventListener("click", async () => {
+        if (!currentUser) {
+          alert("Please wait for authentication");
+          return;
+        }
+
+        const bookName = document.getElementById("bookName").value.trim();
+        const targetQty = parseInt(document.getElementById("targetQty").value);
+        const deadlineInput = document.getElementById("deadline").value;
+
+        if (!bookName || !targetQty || targetQty < 2 || !deadlineInput) {
+          alert("Please fill all fields correctly (target must be at least 2)");
+          return;
+        }
+
+        const deadline = new Date(deadlineInput);
+        if (deadline <= new Date()) {
+          alert("Deadline must be in the future");
+          return;
+        }
+
+        const btn = document.getElementById("createOrderBtn");
+        btn.disabled = true;
+        btn.textContent = "Creating...";
+
+        try {
+          const orderRef = await addDoc(collection(window.db, "groupOrders"), {
+            bookName: bookName,
+            targetQuantity: targetQty,
+            currentQuantity: 1,
+            status: "open",
+            createdBy: currentUser.uid,
+            creatorEmail: currentUser.email || "N/A",
+            deadline: deadline,
+            createdAt: new Date(),
+            participants: [currentUser.uid]
+          });
+
+          alert(`✅ Order created successfully!\n\nOrder ID: ${orderRef.id}`);
+          document.getElementById("bookName").value = "";
+          document.getElementById("targetQty").value = "";
+          document.getElementById("deadline").value = "";
+        } catch (error) {
+          alert(`❌ Failed to create order:\n${error.message}`);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Create Group Order";
+        }
+      });
+
+      onSnapshot(collection(window.db, "groupOrders"), (snapshot) => {
+        const list = document.getElementById("ordersList");
+        list.innerHTML = "";
+
+        if (snapshot.empty) {
+          list.innerHTML = "<p>No active orders yet. Create one above!</p>";
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const order = doc.data();
+          const orderId = doc.id;
+          const percent = Math.min(((order.currentQuantity || 0) / (order.targetQuantity || 1)) * 100, 100);
+          const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline || Date.now());
+          const hasJoined = currentUser && order.participants && order.participants.includes(currentUser.uid);
+
+          const orderDiv = document.createElement("div");
+          orderDiv.className = "order-item";
+          orderDiv.innerHTML = `
         <b>${order.bookName || "N/A"}</b><br/>
         Buyers: ${order.currentQuantity || 0}/${order.targetQuantity || "N/A"}<br/>
         Status: ${order.status || "open"}<br/>
@@ -204,115 +295,116 @@ function initBookOrders() {
         <div class="progress">
           <div class="bar" style="width:${percent}%"></div>
         </div>
-        ${!hasJoined && (order.currentQuantity || 0) < (order.targetQuantity || 0) ? 
-          `<button class="join-btn" onclick="joinOrder('${orderId}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Join Order</button>` : 
-          hasJoined ? '<p style="color:#34a853; margin-top:8px;">✓ You joined this order</p>' : ''}
+        ${!hasJoined && (order.currentQuantity || 0) < (order.targetQuantity || 0) ?
+              `<button class="join-btn" onclick="joinOrder('${orderId}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Join Order</button>` :
+              hasJoined ? '<p style="color:#34a853; margin-top:8px;">✓ You joined this order</p>' : ''}
       `;
-      list.appendChild(orderDiv);
-    });
-  });
-}
+          list.appendChild(orderDiv);
+        });
+      });
+    }
 
-window.joinOrder = async (orderId) => {
-  if (!currentUser) {
-    alert("Must be logged in");
-    return;
-  }
-  
-  try {
-    const orderRef = doc(window.db, "groupOrders", orderId);
-    const orderSnap = await getDoc(orderRef);
-    if (!orderSnap.exists()) {
-      alert("Order not found");
-      return;
-    }
-    
-    const orderData = orderSnap.data();
-    if (orderData.participants && orderData.participants.includes(currentUser.uid)) {
-      alert("You have already joined this order");
-      return;
-    }
-    
-    await updateDoc(orderRef, {
-      currentQuantity: increment(1),
-      participants: [...(orderData.participants || []), currentUser.uid]
-    });
-    
-    alert("✅ Successfully joined the order!");
-  } catch (error) {
-    alert(`❌ Failed to join: ${error.message}`);
-  }
-};
+    window.joinOrder = async (orderId) => {
+      if (!currentUser) {
+        alert("Must be logged in");
+        return;
+      }
 
-// Slot Booking
-function initSlotBooking(serviceType, containerId) {
-  if (typeof listenServiceSlots !== "function") {
-    document.getElementById(containerId).innerHTML = "<p>Slot booking module not loaded</p>";
-    return;
-  }
-  
-  listenServiceSlots((slots) => {
-    const filtered = slots.filter(s => s.serviceType === serviceType && s.status === "open");
-    const container = document.getElementById(containerId);
-    container.innerHTML = "";
-    
-    if (filtered.length === 0) {
-      container.innerHTML = `<p>No available ${serviceType} slots. Check back later!</p>`;
-      return;
-    }
-    
-    filtered.forEach(slot => {
-      const slotDiv = document.createElement("div");
-      slotDiv.className = "slot-item";
-      const deadline = slot.deadline?.toMillis ? new Date(slot.deadline.toMillis()) : 
-                      (typeof slot.deadline === 'number' ? new Date(slot.deadline) : new Date());
-      const hasBooked = slot.studentUIDs && slot.studentUIDs.includes(currentUser?.uid);
-      
-      slotDiv.innerHTML = `
+      try {
+        const orderRef = doc(window.db, "groupOrders", orderId);
+        const orderSnap = await getDoc(orderRef);
+        if (!orderSnap.exists()) {
+          alert("Order not found");
+          return;
+        }
+
+        const orderData = orderSnap.data();
+        if (orderData.participants && orderData.participants.includes(currentUser.uid)) {
+          alert("You have already joined this order");
+          return;
+        }
+
+        await updateDoc(orderRef, {
+          currentQuantity: increment(1),
+          participants: [...(orderData.participants || []), currentUser.uid]
+        });
+
+        alert("✅ Successfully joined the order!");
+      } catch (error) {
+        alert(`❌ Failed to join: ${error.message}`);
+      }
+    };
+
+    // Slot Booking
+    function initSlotBooking(serviceType, containerId) {
+      if (typeof listenServiceSlots !== "function") {
+        document.getElementById(containerId).innerHTML = "<p>Slot booking module not loaded</p>";
+        return;
+      }
+
+      listenServiceSlots((slots) => {
+        const filtered = slots.filter(s => s.serviceType === serviceType && s.status === "open");
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+
+        if (filtered.length === 0) {
+          container.innerHTML = `<p>No available ${serviceType} slots. Check back later!</p>`;
+          return;
+        }
+
+        filtered.forEach(slot => {
+          const slotDiv = document.createElement("div");
+          slotDiv.className = "slot-item";
+          const deadline = slot.deadline?.toMillis ? new Date(slot.deadline.toMillis()) :
+            (typeof slot.deadline === 'number' ? new Date(slot.deadline) : new Date());
+          const hasBooked = slot.studentUIDs && slot.studentUIDs.includes(currentUser?.uid);
+
+          slotDiv.innerHTML = `
         <b>${serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Service</b><br/>
         Time Slot: ${slot.timeSlot || "N/A"}<br/>
         Participants: ${slot.participants || 0}/${slot.minParticipants || "N/A"}<br/>
         Deadline: ${deadline.toLocaleString()}<br/>
         Status: ${slot.status || "open"}<br/>
-        ${!hasBooked && slot.status === "open" ? 
-          `<button onclick="bookServiceSlot('${slot.id}', '${serviceType}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Book Slot</button>` :
-          hasBooked ? '<p style="color:#34a853; margin-top:8px;">✓ You booked this slot</p>' : ''}
+        ${!hasBooked && slot.status === "open" ?
+              `<button onclick="bookServiceSlot('${slot.id}', '${serviceType}')" style="width:auto; padding:8px 16px; margin-top:8px; background:#34a853;">Book Slot</button>` :
+              hasBooked ? '<p style="color:#34a853; margin-top:8px;">✓ You booked this slot</p>' : ''}
       `;
-      container.appendChild(slotDiv);
-    });
-  }, true);
-}
-
-window.bookServiceSlot = async (slotId, serviceType) => {
-  if (!currentUser) {
-    alert("Must be logged in");
-    return;
-  }
-  
-  if (typeof bookSlot !== "function") {
-    alert("Slot booking function not available");
-    return;
-  }
-  
-  try {
-    const success = await bookSlot(slotId, currentUser.uid);
-    if (success) {
-      alert(`✅ Successfully booked ${serviceType} slot!`);
-    } else {
-      alert(`❌ Failed to book slot. It may be full or expired.`);
+          container.appendChild(slotDiv);
+        });
+      }, true);
     }
-  } catch (error) {
-    alert(`❌ Error: ${error.message || "Unknown error"}`);
-  }
-};
 
-// Set minimum datetime to now
-const now = new Date();
-now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-const deadlineInput = document.getElementById("deadline");
-if (deadlineInput) {
-  deadlineInput.min = now.toISOString().slice(0, 16);
-}
-</script>
+    window.bookServiceSlot = async (slotId, serviceType) => {
+      if (!currentUser) {
+        alert("Must be logged in");
+        return;
+      }
+
+      if (typeof bookSlot !== "function") {
+        alert("Slot booking function not available");
+        return;
+      }
+
+      try {
+        const success = await bookSlot(slotId, currentUser.uid);
+        if (success) {
+          alert(`✅ Successfully booked ${serviceType} slot!`);
+        } else {
+          alert(`❌ Failed to book slot. It may be full or expired.`);
+        }
+      } catch (error) {
+        alert(`❌ Error: ${error.message || "Unknown error"}`);
+      }
+    };
+
+    // Set minimum datetime to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const deadlineInput = document.getElementById("deadline");
+    if (deadlineInput) {
+      deadlineInput.min = now.toISOString().slice(0, 16);
+    }
+  </script>
 </body>
+
 </html>

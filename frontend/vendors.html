@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,25 +11,30 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
             min-height: 100vh;
             padding: 20px;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
+
         .header {
             text-align: center;
             color: white;
             margin-bottom: 30px;
         }
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
         }
+
         .user-info {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -39,6 +45,7 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .card {
             background: white;
             border-radius: 12px;
@@ -46,6 +53,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             margin-bottom: 20px;
         }
+
         .card h2 {
             color: #333;
             margin-bottom: 20px;
@@ -53,9 +61,11 @@
             border-bottom: 3px solid #34a853;
             padding-bottom: 10px;
         }
+
         .form-group {
             margin-bottom: 15px;
         }
+
         .form-group label {
             display: block;
             font-weight: 600;
@@ -63,17 +73,24 @@
             margin-bottom: 6px;
             font-size: 0.9rem;
         }
-        .form-group input, .form-group select, .form-group textarea {
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1rem;
         }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #34a853;
         }
+
         button {
             width: 100%;
             padding: 14px;
@@ -86,34 +103,43 @@
             cursor: pointer;
             margin-top: 10px;
         }
+
         button:hover {
             opacity: 0.9;
         }
+
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        .order-item, .slot-item {
+
+        .order-item,
+        .slot-item {
             padding: 15px;
             background: #f9f9f9;
             border-left: 5px solid #34a853;
             margin-top: 12px;
             border-radius: 6px;
         }
-        .order-item button, .slot-item button {
+
+        .order-item button,
+        .slot-item button {
             width: auto;
             padding: 8px 16px;
             margin-top: 8px;
             margin-right: 8px;
         }
+
         .hidden {
             display: none;
         }
+
         .content-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
+
         @media (max-width: 1024px) {
             .content-grid {
                 grid-template-columns: 1fr;
@@ -121,6 +147,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -156,7 +183,14 @@
                 </div>
                 <div class="form-group">
                     <label for="vendorLocation">Location/Address *</label>
-                    <textarea id="vendorLocation" required placeholder="e.g., Ashok Rajpath, near NIT Main Gate"></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <textarea id="vendorLocation" required placeholder="e.g., Ashok Rajpath, near NIT Main Gate"
+                            style="flex:1;"></textarea>
+                        <button type="button" id="pickLocBtn" style="width: auto; background: #673ab7;">Select on
+                            Map</button>
+                    </div>
+                    <input type="hidden" id="vendorLat">
+                    <input type="hidden" id="vendorLng">
                 </div>
                 <div class="form-group">
                     <label for="vendorPhone">Phone Number *</label>
@@ -213,7 +247,7 @@
 
     <script type="module" src="firebase.js"></script>
     <script type="module" src="serviceSlots.js"></script>
-    
+
     <script type="module">
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -281,9 +315,25 @@
         });
 
         function initRegistration() {
+            // Check for selected location from map
+            const savedLoc = localStorage.getItem('selectedVendorLocation');
+            if (savedLoc) {
+                const loc = JSON.parse(savedLoc);
+                document.getElementById('vendorLat').value = loc.lat;
+                document.getElementById('vendorLng').value = loc.lng;
+                document.getElementById('vendorLocation').value = `Lat: ${loc.lat.toFixed(5)}, Lng: ${loc.lng.toFixed(5)}`;
+                // Clear after use to avoid stale data
+                localStorage.removeItem('selectedVendorLocation');
+            }
+
+            document.getElementById("pickLocBtn").addEventListener("click", () => {
+                localStorage.setItem('vendorFormReturnUrl', window.location.href);
+                window.location.href = "vendorsMap.html?select=true";
+            });
+
             document.getElementById("vendorForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
-                
+
                 const name = document.getElementById("vendorName").value.trim();
                 const category = document.getElementById("vendorCategory").value;
                 const location = document.getElementById("vendorLocation").value.trim();
@@ -304,7 +354,12 @@
                         uid: currentUser.uid,
                         name: name,
                         category: category,
+
                         location: location,
+                        // Use coords if available (Critical for map flow)
+                        lat: document.getElementById('vendorLat').value ? parseFloat(document.getElementById('vendorLat').value) : null,
+                        lng: document.getElementById('vendorLng').value ? parseFloat(document.getElementById('vendorLng').value) : null,
+                        phone: phone,
                         phone: phone,
                         shopTimings: timings,
                         email: currentUser.email || "N/A",
@@ -349,10 +404,10 @@
                         Status: ${status}<br/>
                         Deadline: ${deadline.toLocaleString()}<br/>
                         Created by: ${order.creatorEmail || "N/A"}<br/>
-                        ${status === "open" ? 
-                          `<button onclick="confirmOrder('${orderId}')" style="background:#4285F4;">Confirm Vendor</button>` : ''}
-                        ${status === "vendor_confirmed" ? 
-                          `<button onclick="markCompleted('${orderId}')" style="background:#34a853;">Mark Completed</button>` : ''}
+                        ${status === "open" ?
+                            `<button onclick="confirmOrder('${orderId}')" style="background:#4285F4;">Confirm Vendor</button>` : ''}
+                        ${status === "vendor_confirmed" ?
+                            `<button onclick="markCompleted('${orderId}')" style="background:#34a853;">Mark Completed</button>` : ''}
                     `;
                     list.appendChild(orderDiv);
                 });
@@ -361,7 +416,7 @@
             // Create slot form
             document.getElementById("slotForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
-                
+
                 const serviceType = document.getElementById("serviceType").value;
                 const timeSlot = document.getElementById("timeSlot").value.trim();
                 const minParticipants = parseInt(document.getElementById("minParticipants").value);
@@ -443,4 +498,5 @@
         };
     </script>
 </body>
+
 </html>

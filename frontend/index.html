@@ -82,7 +82,6 @@
     .role-btn.admin {
       background: #ea4335;
     }
-
   </style>
 </head>
 
@@ -110,6 +109,8 @@
 
   <!-- Load modules and expose globally for testing -->
   <script type="module">
+    console.log("🚀 Sewa-Setu MVP – Demo Start:", new Date().toISOString());
+
     import { generateDiscountReport } from "./googleBooks.js";
     import { createSlot, bookSlot, flipExpiredSlots, listenServiceSlots } from "./serviceSlots.js";
 

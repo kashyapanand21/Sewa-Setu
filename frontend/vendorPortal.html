@@ -1,110 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Sewa Setu – Vendor Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
       margin: 0;
-      padding: 0;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       min-height: 100vh;
     }
+
     .container {
-      width: 90%;
-      max-width: 450px;
       background: white;
       padding: 40px;
       border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
     }
+
     h1 {
       color: #333;
-      margin-bottom: 10px;
-      font-size: 28px;
-      text-align: center;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-      text-align: center;
-      font-size: 14px;
-    }
-    .form-group {
       margin-bottom: 20px;
+      font-size: 24px;
     }
-    .form-group label {
-      display: block;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    .form-group input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    .form-group input:focus {
-      outline: none;
-      border-color: #34a853;
-    }
+
     button {
-      width: 100%;
-      padding: 14px;
-      background: #34a853;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
+      background: white;
+      border: 1px solid #ddd;
+      padding: 12px 24px;
+      border-radius: 24px;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 10px;
-      transition: opacity 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s;
     }
+
     button:hover {
-      opacity: 0.9;
+      background: #f8f9fa;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+
     .status {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 6px;
+      margin-top: 20px;
       font-size: 14px;
-      text-align: center;
-    }
-    .status.info {
-      background: #e8f5e9;
-      color: #137333;
-    }
-    .status.error {
-      background: #fce8e6;
-      color: #c5221f;
-    }
-    .status.success {
-      background: #e6f4ea;
-      color: #137333;
-    }
-    .hidden {
-      display: none;
-    }
-    .divider {
-      text-align: center;
-      margin: 20px 0;
-      color: #999;
-      font-size: 14px;
+      color: #666;
     }
   </style>
 </head>
@@ -112,158 +63,82 @@
 <body>
   <div class="container">
     <h1>Vendor Portal</h1>
-    <p class="subtitle">Create account or login to continue</p>
-    
-    <div id="accountForm" class="hidden">
-      <div class="form-group">
-        <label for="vendorName">Vendor/Shop Name *</label>
-        <input type="text" id="vendorName" placeholder="Enter vendor name" required>
-      </div>
-      <div class="form-group">
-        <label for="vendorEmail">Email *</label>
-        <input type="email" id="vendorEmail" placeholder="Enter your email" required>
-      </div>
-      <button id="createAccountBtn" disabled>Create Account</button>
-    </div>
-    
-    <div class="divider">OR</div>
-    
-    <button id="googleLoginBtn">Login with Google</button>
-    
-    <div id="status" class="status info hidden"></div>
+    <p style="color:#666; margin-bottom:30px;">Login to manage your shop</p>
+    <button id="googleLoginBtn">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="G">
+      Sign in with Google
+    </button>
+    <div id="status" class="status">Initializing...</div>
   </div>
 
   <script type="module" src="firebase.js"></script>
-  
   <script type="module">
     import { signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
     const statusEl = document.getElementById("status");
-    const accountForm = document.getElementById("accountForm");
-    const googleLoginBtn = document.getElementById("googleLoginBtn");
-    const createAccountBtn = document.getElementById("createAccountBtn");
-    
-    function showStatus(message, type = "info") {
-      statusEl.textContent = message;
-      statusEl.className = `status ${type}`;
-      statusEl.classList.remove("hidden");
+
+    function updateStatus(msg) {
+      statusEl.textContent = msg;
+      console.log(`[Portal] ${msg}`);
     }
-    
-    function hideStatus() {
-      statusEl.classList.add("hidden");
-    }
-    
-    function waitForFirebase(callback, maxAttempts = 20) {
-      let attempts = 0;
-      const checkInterval = setInterval(() => {
-        attempts++;
-        if (window.auth && window.db && window.provider) {
-          clearInterval(checkInterval);
-          callback();
-        } else if (attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          showStatus("Firebase initialization timeout. Please refresh.", "error");
-        }
-      }, 100);
-    }
-    
-    waitForFirebase(() => {
-      // Check if already authenticated
+
+    // Wait for Firebase
+    const initInterval = setInterval(() => {
+      if (window.auth && window.db) {
+        clearInterval(initInterval);
+        startAuthListener();
+      }
+    }, 100);
+
+    function startAuthListener() {
+      updateStatus("Checking authentication...");
       onAuthStateChanged(window.auth, async (user) => {
         if (user) {
-          // Check if vendor exists in Firestore vendors collection
-          try {
-            const vendorDoc = await getDoc(doc(window.db, "vendors", user.uid));
-            if (vendorDoc.exists()) {
-              // Vendor exists, route to vendors page
-              window.location.href = "vendors.html";
-              return;
-            } else {
-              // Vendor doesn't exist, show account creation form
-              accountForm.classList.remove("hidden");
-              document.getElementById("vendorName").value = user.displayName || "";
-              document.getElementById("vendorEmail").value = user.email || "";
-              createAccountBtn.disabled = false;
-            }
-          } catch (error) {
-            console.error("Error checking vendor:", error);
-            showStatus("Error checking account status", "error");
-          }
+          await handleUserRoute(user);
+        } else {
+          updateStatus("Please sign in to continue.");
         }
       });
-      
-      // Google login handler
-      googleLoginBtn.addEventListener("click", async () => {
-        try {
-          showStatus("Opening Google login...", "info");
-          const result = await signInWithPopup(window.auth, window.provider);
-          const user = result.user;
-          
-          // Check if vendor exists in vendors collection
-          const vendorDoc = await getDoc(doc(window.db, "vendors", user.uid));
-          if (vendorDoc.exists()) {
-            showStatus("Login successful! Redirecting...", "success");
-            setTimeout(() => {
-              window.location.href = "vendors.html";
-            }, 800);
-          } else {
-            // Vendor doesn't exist, show form
-            accountForm.classList.remove("hidden");
-            document.getElementById("vendorName").value = user.displayName || "";
-            document.getElementById("vendorEmail").value = user.email || "";
-            createAccountBtn.disabled = false;
-            showStatus("Please complete your vendor registration", "info");
-          }
-        } catch (error) {
-          console.error("Login error:", error);
-          showStatus(`Login failed: ${error.message || "Unknown error"}`, "error");
-        }
-      });
-      
-      // Create account handler
-      createAccountBtn.addEventListener("click", async () => {
-        const name = document.getElementById("vendorName").value.trim();
-        const email = document.getElementById("vendorEmail").value.trim();
-        
-        if (!name || !email) {
-          showStatus("Please fill all fields", "error");
+    }
+
+    async function handleUserRoute(user) {
+      updateStatus("Verifying vendor profile...");
+      try {
+        const vendorDoc = await getDoc(doc(window.db, "vendors", user.uid));
+
+        if (!vendorDoc.exists()) {
+          updateStatus("New vendor detected. Redirecting to registration...");
+          window.location.href = "vendors.html"; // Case A: Registration
           return;
         }
-        
-        try {
-          const currentUser = window.currentUser;
-          if (!currentUser) {
-            showStatus("Please login with Google first", "error");
-            return;
-          }
-          
-          createAccountBtn.disabled = true;
-          createAccountBtn.textContent = "Creating...";
-          
-          await setDoc(doc(window.db, "vendors", currentUser.uid), {
-            uid: currentUser.uid,
-            name: name,
-            email: email,
-            role: "vendor",
-            createdAt: new Date(),
-            lastLogin: new Date()
-          }, { merge: true });
-          
-          showStatus("Account created! Redirecting...", "success");
-          setTimeout(() => {
-            window.location.href = "vendors.html";
-          }, 800);
-        } catch (error) {
-          console.error("Account creation error:", error);
-          showStatus(`Failed to create account: ${error.message || "Unknown error"}`, "error");
-          createAccountBtn.disabled = false;
-          createAccountBtn.textContent = "Create Account";
+
+        const data = vendorDoc.data();
+        if (!data.lat || !data.lng) {
+          updateStatus("Location missing. Redirecting to map...");
+          window.location.href = "vendorsMap.html"; // Case B: Unlocated
+          return;
         }
-      });
-      
-      showStatus("Ready. Login with Google to continue.", "info");
+
+        updateStatus("Verified. Opening dashboard...");
+        window.location.href = "vendors.html"; // Case C: Located (Dashboard)
+      } catch (error) {
+        console.error("Routing error:", error);
+        updateStatus("Error verifying profile. See console.");
+      }
+    }
+
+    document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+      updateStatus("Opening Google Sign-In...");
+      try {
+        await signInWithPopup(window.auth, window.provider);
+        // Listener will handle routing
+      } catch (error) {
+        console.error("Login failed:", error);
+        updateStatus("Login failed. Please try again.");
+      }
     });
   </script>
 </body>
+
 </html>

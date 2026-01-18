@@ -7,569 +7,379 @@
     <title>Vendor Portal - Sewa Setu</title>
     <style>
         * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
-            min-height: 100vh;
+            background: #f5f5f5;
             padding: 20px;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1000px;
             margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .user-info {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Mobile responsive user-info */
-        @media (max-width: 600px) {
-            .user-info {
-                flex-direction: column;
-                gap: 10px;
-            }
         }
 
         .card {
             background: white;
-            border-radius: 12px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
 
-        .card h2 {
+        h1,
+        h2 {
             color: #333;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-            border-bottom: 3px solid #34a853;
-            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .form-group {
             margin-bottom: 15px;
         }
 
-        .form-group label {
+        label {
             display: block;
-            font-weight: 600;
+            margin-bottom: 5px;
+            font-weight: bold;
             color: #555;
-            margin-bottom: 6px;
-            font-size: 0.9rem;
         }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        input,
+        select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #34a853;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
         }
 
         button {
-            width: 100%;
-            padding: 14px;
             background: #34a853;
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            opacity: 0.9;
+            width: 100%;
+            font-weight: bold;
         }
 
         button:disabled {
-            opacity: 0.6;
+            background: #ccc;
             cursor: not-allowed;
-        }
-
-        .order-item,
-        .slot-item {
-            padding: 15px;
-            background: #f9f9f9;
-            border-left: 5px solid #34a853;
-            margin-top: 12px;
-            border-radius: 6px;
         }
 
         .hidden {
             display: none;
         }
 
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        /* Dashboard Styles */
+        .order-item {
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4285F4;
         }
 
-        @media (max-width: 1024px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
+        .warning-banner {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ffeeba;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logout-btn {
+            background: #ea4335;
+            width: auto;
+            font-size: 14px;
+            padding: 8px 16px;
         }
     </style>
 </head>
 
 <body>
+
     <div class="container">
-        <div class="header">
-            <h1>🏪 Vendor Portal</h1>
-            <p>Manage your orders and service slots</p>
-        </div>
+        <div id="loading" style="text-align: center; margin-top: 50px;">Loading Vendor Portal...</div>
 
-        <div class="user-info" id="userInfo">
-            <span>Loading user...</span>
-            <button class="logout-btn" onclick="handleLogout()"
-                style="width:auto; padding:8px 16px; background:#ea4335;">Logout</button>
-        </div>
-
-        <!-- Registration Form (shown if vendor not registered) -->
-        <div class="card" id="registrationCard">
-            <h2>Complete Vendor Registration</h2>
-            <form id="vendorForm">
-                <div class="form-group">
-                    <label for="vendorName">Vendor/Shop Name *</label>
-                    <input type="text" id="vendorName" required placeholder="e.g., Sharma Book Store">
-                </div>
-                <div class="form-group">
-                    <label for="vendorCategory">Category *</label>
-                    <select id="vendorCategory" required>
-                        <option value="">Select Category</option>
-                        <option value="books">Technical Books</option>
-                        <option value="printing">Printing/Xerox</option>
-                        <option value="laundry">Laundry Service</option>
-                        <option value="stationery">Stationery</option>
-                        <option value="food">Food/Snacks</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="general">General Store</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="vendorLocation">Location/Address *</label>
-                    <div style="display: flex; gap: 10px;">
-                        <textarea id="vendorLocation" required placeholder="e.g., Ashok Rajpath, near NIT Main Gate"
-                            style="flex:1;"></textarea>
-                        <button type="button" id="pickLocBtn"
-                            style="width: auto; background: #673ab7; font-size: 0.9rem; padding: 10px;">Select on
-                            Map</button>
+        <!-- REGISTRATION VIEW -->
+        <div id="registrationView" class="hidden">
+            <div class="card">
+                <h1>🏪 Shop Registration</h1>
+                <p style="color: #666; margin-bottom: 20px;">Please enter your shop details to continue.</p>
+                <form id="regForm">
+                    <div class="form-group">
+                        <label>Shop Name</label>
+                        <input type="text" id="regName" required placeholder="e.g. Gupta General Store">
                     </div>
-                    <!-- Hidden fields to store coords -->
-                    <input type="hidden" id="vendorLat">
-                    <input type="hidden" id="vendorLng">
-                </div>
-                <div class="form-group">
-                    <label for="vendorPhone">Phone Number *</label>
-                    <input type="tel" id="vendorPhone" required placeholder="e.g., +91-55555 55555">
-                </div>
-                <div class="form-group">
-                    <label for="vendorTimings">Shop Timings *</label>
-                    <input type="text" id="vendorTimings" required placeholder="e.g., 9:00 AM - 8:00 PM">
-                </div>
-                <button type="submit" id="submitBtn">Register Vendor</button>
-            </form>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="regCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="books">Technical Books</option>
+                            <option value="printing">Printing/Xerox</option>
+                            <option value="laundry">Laundry</option>
+                            <option value="stationery">Stationery</option>
+                            <option value="food">Food</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="regPhone" required placeholder="10-digit mobile number">
+                    </div>
+                    <div class="form-group">
+                        <label>Shop Timings</label>
+                        <input type="text" id="regTimings" required placeholder="e.g. 10 AM - 9 PM">
+                    </div>
+                    <button type="submit" id="regSubmitBtn">Register & Pin Location</button>
+                </form>
+            </div>
         </div>
 
-        <!-- Vendor Dashboard (shown if vendor registered) -->
-        <div id="vendorDashboard" class="hidden">
-            <div class="content-grid">
-                <!-- Orders Stream -->
-                <div class="card">
-                    <h2>Collective Orders</h2>
-                    <div id="ordersList">Loading orders...</div>
-                </div>
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboardView" class="hidden">
+            <div class="top-bar">
+                <h2>Vendor Dashboard</h2>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
 
-                <!-- Create Service Slot -->
-                <div class="card">
-                    <h2>Create Service Slot</h2>
-                    <form id="slotForm">
-                        <div class="form-group">
-                            <label for="serviceType">Service Type *</label>
-                            <select id="serviceType" required>
-                                <option value="">Select Service</option>
-                                <option value="laundry">Laundry</option>
-                                <option value="printing">Printing</option>
-                                <option value="stationery">Stationery</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="timeSlot">Time Slot *</label>
-                            <input type="text" id="timeSlot" required placeholder="e.g., 10:00 AM - 12:00 PM">
-                        </div>
-                        <div class="form-group">
-                            <label for="minParticipants">Minimum Participants *</label>
-                            <input type="number" id="minParticipants" required min="2" placeholder="e.g., 5">
-                        </div>
-                        <div class="form-group">
-                            <label for="slotDeadline">Deadline *</label>
-                            <input type="datetime-local" id="slotDeadline" required>
-                        </div>
-                        <button type="submit" id="createSlotBtn">Create Slot</button>
-                    </form>
-                </div>
+            <div id="locationWarning" class="warning-banner hidden">
+                ⚠️ <b>Action Required:</b> Please pin your shop location on the map to confirm orders and create slots.
+                <br><button onclick="window.location.href='vendorsMap.html'"
+                    style="margin-top:10px; width:auto; background:#856404;">Pin Location Now</button>
+            </div>
+
+            <div class="card">
+                <h3>Create Service Slot</h3>
+                <form id="slotForm">
+                    <div class="form-group">
+                        <label>Service Type</label>
+                        <select id="slotType">
+                            <option value="laundry">Laundry</option>
+                            <option value="printing">Printing</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Details</label>
+                        <input type="text" id="slotDetails" placeholder="Time slot, requirements...">
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Participants</label>
+                        <input type="number" id="slotMin" value="5" min="2">
+                    </div>
+                    <div class="form-group">
+                        <label>Deadline (Minutes from now)</label>
+                        <input type="number" id="slotDeadlineOffset" value="60">
+                    </div>
+                    <button type="submit" id="createSlotBtn">Create Slot</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Active Orders</h3>
+                <div id="ordersList">Loading orders...</div>
             </div>
         </div>
     </div>
 
     <script type="module" src="firebase.js"></script>
     <script type="module" src="serviceSlots.js"></script>
-
     <script type="module">
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { createSlot } from "./serviceSlots.js";
 
         let currentUser = null;
-        let vendorData = null;
-        let isVerified = false;
+        let isFullyVerified = false; // doc exists + lat + lng
 
-        window.handleLogout = async () => {
-            try {
-                await signOut(window.auth);
-                window.location.href = "index.html";
-            } catch (error) {
-                console.error("Logout error:", error);
+        function init() {
+            if (!window.auth || !window.db) {
+                setTimeout(init, 100);
+                return;
             }
-        };
 
-        function waitForFirebase(callback) {
-            let attempts = 0;
-            const checkInterval = setInterval(() => {
-                attempts++;
-                if (window.auth && window.db) {
-                    clearInterval(checkInterval);
-                    callback();
-                } else if (attempts >= 20) {
-                    clearInterval(checkInterval);
-                    console.error("Firebase initialization timeout");
-                }
-            }, 100);
-        }
-
-        waitForFirebase(() => {
             onAuthStateChanged(window.auth, async (user) => {
                 if (!user) {
                     window.location.href = "vendorPortal.html";
                     return;
                 }
-
                 currentUser = user;
-                document.getElementById("userInfo").innerHTML = `
-                    <span>Logged in as: <strong>${user.email || "N/A"}</strong></span>
-                    <button onclick="handleLogout()" style="width:auto; padding:8px 16px; background:#ea4335;">Logout</button>
-                `;
+                checkVendorStatus();
+            });
+        }
 
-                // Check if vendor exists
-                try {
-                    const vendorDoc = await getDoc(doc(window.db, "vendors", user.uid));
-                    if (vendorDoc.exists()) {
-                        vendorData = vendorDoc.data();
+        async function checkVendorStatus() {
+            try {
+                const vendorRef = doc(window.db, "vendors", currentUser.uid);
+                const vendorSnap = await getDoc(vendorRef);
 
-                        // Strict Verification Check: Must have lat/lng
-                        // Strict Verification Check: Must have lat/lng
-                        // Loop Fix: Check if we have a pending location in localStorage to save
-                        const pendingLoc = localStorage.getItem('selectedVendorLocation');
-                        if (pendingLoc) {
-                            try {
-                                const loc = JSON.parse(pendingLoc);
-                                console.log("Updating vendor location from map return...", loc);
-                                await setDoc(doc(window.db, "vendors", user.uid), {
-                                    lat: loc.lat,
-                                    lng: loc.lng,
-                                    updatedAt: new Date()
-                                }, { merge: true });
+                document.getElementById("loading").classList.add("hidden");
 
-                                // Update local data to prevent redirect
-                                vendorData.lat = loc.lat;
-                                vendorData.lng = loc.lng;
-                                localStorage.removeItem('selectedVendorLocation');
-                                localStorage.setItem("vendorLocated", "true");
+                if (!vendorSnap.exists()) {
+                    // CASE A: New Vendor -> Show Registration
+                    document.getElementById("registrationView").classList.remove("hidden");
+                    initRegistration();
+                } else {
+                    // Existing Vendor -> Show Dashboard
+                    document.getElementById("dashboardView").classList.remove("hidden");
+                    const data = vendorSnap.data();
 
-                                console.log({ state: "vendor_pin_saved", uid: user.uid, lat: loc.lat, lng: loc.lng, popupLoop: false, time: new Date() });
-                            } catch (e) {
-                                console.error("Failed to save location on return:", e);
-                            }
-                        }
-
-                        // Check if session flag says we are located (latency compensation)
-                        const sessionLocated = localStorage.getItem("vendorLocated") === "true";
-
-                        if ((!vendorData.lat || !vendorData.lng) && !sessionLocated) {
-                            console.log({ state: "vendor_denied", uid: user.uid, reason: "not_verified_or_not_located", time: new Date() });
-                            alert("⚠️ Verification Required: You must pin your shop location on the map to continue.");
-
-                            // Redirect to map in selection mode to fix this
-                            localStorage.setItem('vendorFormReturnUrl', window.location.href);
-                            window.location.href = "vendorsMap.html?select=true";
-                            return;
-                        }
-
-                        isVerified = true;
-                        document.getElementById("registrationCard").classList.add("hidden");
-                        document.getElementById("vendorDashboard").classList.remove("hidden");
-                        initVendorDashboard();
+                    // Permission Check
+                    if (data.lat && data.lng) {
+                        isFullyVerified = true;
+                        document.getElementById("locationWarning").classList.add("hidden");
                     } else {
-                        // Registration flow
-                        document.getElementById("registrationCard").classList.remove("hidden");
-                        document.getElementById("vendorDashboard").classList.add("hidden");
-                        initRegistration();
+                        isFullyVerified = false;
+                        document.getElementById("locationWarning").classList.remove("hidden");
+                        disableDashboardActions();
                     }
-                } catch (error) {
-                    console.error("Error checking vendor:", error);
-                    alert("Error checking vendor status");
-                }
-            });
-        });
 
-        function initRegistration() {
-            // Check for selected location from map
-            const savedLoc = localStorage.getItem('selectedVendorLocation');
-            if (savedLoc) {
-                const loc = JSON.parse(savedLoc);
-                document.getElementById('vendorLat').value = loc.lat;
-                document.getElementById('vendorLng').value = loc.lng;
-                document.getElementById('vendorLocation').value = `Lat: ${loc.lat.toFixed(5)}, Lng: ${loc.lng.toFixed(5)}`;
-                localStorage.removeItem('selectedVendorLocation');
+                    initDashboard();
+                }
+            } catch (e) {
+                console.error("Status check failed:", e);
+                alert("Connection error.");
             }
+        }
 
-            document.getElementById("pickLocBtn").addEventListener("click", () => {
-                localStorage.setItem('vendorFormReturnUrl', window.location.href);
-                window.location.href = "vendorsMap.html?select=true";
-            });
-
-            document.getElementById("vendorForm").addEventListener("submit", async (e) => {
+        // --- REGISTRATION LOGIC ---
+        function initRegistration() {
+            document.getElementById("regForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
-
-                const name = document.getElementById("vendorName").value.trim();
-                const category = document.getElementById("vendorCategory").value;
-                const location = document.getElementById("vendorLocation").value.trim();
-                const phone = document.getElementById("vendorPhone").value.trim();
-                const timings = document.getElementById("vendorTimings").value.trim();
-                const lat = document.getElementById('vendorLat').value ? parseFloat(document.getElementById('vendorLat').value) : null;
-                const lng = document.getElementById('vendorLng').value ? parseFloat(document.getElementById('vendorLng').value) : null;
-
-                if (!name || !category || !location || !phone || !timings) {
-                    alert("Please fill all required fields");
-                    return;
-                }
-
-                // Enforce lat/lng check on registration too
-                if (!lat || !lng) {
-                    alert("⚠️ You must select a location on the map first!");
-                    return;
-                }
-
-                const submitBtn = document.getElementById("submitBtn");
+                const submitBtn = document.getElementById("regSubmitBtn");
                 submitBtn.disabled = true;
-                submitBtn.textContent = "Registering...";
+                submitBtn.textContent = "Saving...";
 
                 try {
-                    await setDoc(doc(window.db, "vendors", currentUser.uid), {
+                    const data = {
                         uid: currentUser.uid,
-                        name: name,
-                        category: category,
-                        location: location,
-                        phone: phone,
-                        shopTimings: timings,
-                        email: currentUser.email || "N/A",
-                        lat: lat,
-                        lng: lng,
-                        createdAt: new Date(),
-                        lastLogin: new Date()
-                    }, { merge: true });
+                        shopName: document.getElementById("regName").value.trim(),
+                        category: document.getElementById("regCategory").value,
+                        phone: document.getElementById("regPhone").value.trim(),
+                        timings: document.getElementById("regTimings").value.trim(),
+                        email: currentUser.email,
+                        status: "registered_but_not_located",
+                        createdAt: serverTimestamp()
+                    };
 
-                    alert("✅ Vendor registered successfully!");
-                    location.reload();
-                } catch (error) {
-                    console.error("Registration error:", error);
-                    alert(`❌ Failed: ${error.message || "Unknown error"}`);
-                } finally {
+                    await setDoc(doc(window.db, "vendors", currentUser.uid), data);
+
+                    // Redirect to Map
+                    window.location.href = "vendorsMap.html";
+                } catch (err) {
+                    console.error("Registration failed:", err);
+                    alert("Error registering. Try again.");
                     submitBtn.disabled = false;
-                    submitBtn.textContent = "Register Vendor";
+                    submitBtn.textContent = "Register & Pin Location";
                 }
             });
         }
 
-        function initVendorDashboard() {
-            // Orders stream
-            onSnapshot(collection(window.db, "groupOrders"), (snapshot) => {
+        // --- DASHBOARD LOGIC ---
+        function disableDashboardActions() {
+            document.getElementById("createSlotBtn").disabled = true;
+            document.getElementById("createSlotBtn").title = "Pin location verify first";
+            // Order buttons are dynamic, handled in renderer
+        }
+
+        function initDashboard() {
+            document.getElementById("logoutBtn").addEventListener("click", () => {
+                signOut(window.auth).then(() => window.location.reload());
+            });
+
+            // Load Orders
+            onSnapshot(collection(window.db, "groupOrders"), (snap) => {
                 const list = document.getElementById("ordersList");
                 list.innerHTML = "";
 
-                if (snapshot.empty) {
-                    list.innerHTML = "<p>No orders yet.</p>";
-                    return;
-                }
+                snap.forEach(d => {
+                    const o = d.data();
+                    const div = document.createElement("div");
+                    div.className = "order-item";
 
-                snapshot.forEach(d => {
-                    const order = d.data();
-                    const orderId = d.id;
-                    const deadline = order.deadline?.toDate ? order.deadline.toDate() : new Date(order.deadline || Date.now());
-                    const status = order.status || "open";
-
-                    // Ownership check: Can only mark completed if *I* confirmed it
-                    const isMyOrder = order.vendorId === currentUser.uid;
-                    const isConfirmedBySomeoneElse = status === "vendor_confirmed" && !isMyOrder;
-
-                    // Skip orders confirmed by others from the actionable list (optional UI choice, keeping concise)
-
-                    const orderDiv = document.createElement("div");
-                    orderDiv.className = "order-item";
-                    let actionButton = "";
-
-                    if (isVerified) {
-                        if (status === "open") {
-                            actionButton = `<button onclick="confirmOrder('${orderId}')" style="background:#4285F4; width:auto; padding:8px 16px;">Confirm Vendor</button>`;
-                        } else if (status === "vendor_confirmed" && isMyOrder) {
-                            actionButton = `<button onclick="markCompleted('${orderId}')" style="background:#34a853; width:auto; padding:8px 16px;">Mark Completed</button>`;
-                        } else if (status === "vendor_confirmed") {
-                            actionButton = `<span style="color:#666; font-size:12px;">Confirmed by another vendor</span>`;
-                        } else if (status === "completed") {
-                            actionButton = `<span style="color:green; font-weight:bold;">Completed</span>`;
-                        }
+                    let btnHtml = "";
+                    if (o.status === "open") {
+                        btnHtml = `<button onclick="window.handleOrderAction('${d.id}', 'confirm')" ${!isFullyVerified ? 'disabled' : ''}>Confirm Order</button>`;
+                    } else if (o.status === "vendor_confirmed" && o.vendorId === currentUser.uid) {
+                        btnHtml = `<button onclick="window.handleOrderAction('${d.id}', 'complete')" ${!isFullyVerified ? 'disabled' : ''}>Mark Complete</button>`;
+                    } else {
+                        btnHtml = `<span>Status: ${o.status}</span>`;
                     }
 
-                    orderDiv.innerHTML = `
-                        <b>${order.bookName || "N/A"}</b><br/>
-                        Buyers: ${order.currentQuantity || 0}/${order.targetQuantity || "N/A"}<br/>
-                        Status: ${status}<br/>
-                        Deadline: ${deadline.toLocaleString()}<br/>
-                        Created by: ${order.creatorEmail || "N/A"}<br/>
-                        ${actionButton}
-                    `;
-                    list.appendChild(orderDiv);
+                    div.innerHTML = `
+                    <h4>${o.bookName || "Order"}</h4>
+                    <p>Quantity: ${o.currentQuantity}/${o.targetQuantity}</p>
+                    <div style="margin-top:10px">${btnHtml}</div>
+                `;
+                    list.appendChild(div);
                 });
             });
 
-            // Create slot form
+            // Create Slot
             document.getElementById("slotForm").addEventListener("submit", async (e) => {
                 e.preventDefault();
+                if (!isFullyVerified) return alert("Please pin your location first.");
 
-                if (!isVerified) {
-                    console.log({ state: "vendor_denied", uid: currentUser.uid, reason: "not_verified", time: new Date() });
-                    alert("⚠️ Access Denied: You are not verified.");
-                    return;
-                }
-
-                const serviceType = document.getElementById("serviceType").value;
-                const timeSlot = document.getElementById("timeSlot").value.trim();
-                const minParticipants = parseInt(document.getElementById("minParticipants").value);
-                const deadlineInput = document.getElementById("slotDeadline").value;
-
-                if (!serviceType || !timeSlot || !minParticipants || minParticipants < 2 || !deadlineInput) {
-                    alert("Please fill all fields correctly (min participants must be at least 2)");
-                    return;
-                }
-
-                const deadline = new Date(deadlineInput);
-                if (deadline <= new Date()) {
-                    alert("Deadline must be in the future");
-                    return;
-                }
-
-                const createBtn = document.getElementById("createSlotBtn");
-                createBtn.disabled = true;
-                createBtn.textContent = "Creating...";
+                const type = document.getElementById("slotType").value;
+                const details = document.getElementById("slotDetails").value;
+                const min = document.getElementById("slotMin").value;
+                const offset = document.getElementById("slotDeadlineOffset").value;
+                const deadline = Date.now() + (offset * 60000);
 
                 try {
-                    const slotId = await createSlot(
-                        currentUser.uid,
-                        serviceType,
-                        timeSlot,
-                        minParticipants,
-                        deadline.getTime()
-                    );
-
-                    if (slotId) {
-                        alert(`✅ Slot created successfully! Slot ID: ${slotId}`);
-                        document.getElementById("slotForm").reset();
-                    } else {
-                        alert("❌ Failed to create slot");
-                    }
-                } catch (error) {
-                    console.error("Slot creation error:", error);
-                    alert(`❌ Failed: ${error.message}`);
-                } finally {
-                    createBtn.disabled = false;
-                    createBtn.textContent = "Create Slot";
+                    await createSlot(currentUser.uid, type, details, parseInt(min), deadline);
+                    alert("Slot created!");
+                    e.target.reset();
+                } catch (err) {
+                    alert("Error: " + err.message);
                 }
             });
-
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById("slotDeadline").min = now.toISOString().slice(0, 16);
         }
 
-        window.confirmOrder = async (orderId) => {
-            if (!isVerified) return alert("Access Denied");
+        // Global Actions
+        window.handleOrderAction = async (orderId, action) => {
+            if (!isFullyVerified) return alert("Verify location first.");
+
             try {
-                // Claim ownership
-                await updateDoc(doc(window.db, "groupOrders", orderId), {
-                    status: "vendor_confirmed",
-                    vendorId: currentUser.uid, // Ownership
-                    vendorEmail: currentUser.email || "N/A",
-                    confirmedAt: new Date()
-                });
-                alert("✅ Order confirmed! You are now the assigned vendor.");
-            } catch (error) {
-                alert(`❌ Failed: ${error.message}`);
+                const orderRef = doc(window.db, "groupOrders", orderId);
+                if (action === "confirm") {
+                    await updateDoc(orderRef, {
+                        status: "vendor_confirmed",
+                        vendorId: currentUser.uid,
+                        confirmedAt: serverTimestamp()
+                    });
+                } else if (action === "complete") {
+                    await updateDoc(orderRef, {
+                        status: "completed",
+                        completedAt: serverTimestamp()
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Action failed.");
             }
         };
 
-        window.markCompleted = async (orderId) => {
-            // Double check in UI, though button should be hidden
-            if (!isVerified) return alert("Access Denied");
-
-            try {
-                // We should technically check ownership again, but Firestore rules would ideally enforce it.
-                // For frontend demo, we assume the UI button logic is sufficient context.
-                await updateDoc(doc(window.db, "groupOrders", orderId), {
-                    status: "completed",
-                    completedAt: new Date()
-                });
-                alert("✅ Order marked as completed!");
-            } catch (error) {
-                alert(`❌ Failed: ${error.message}`);
-            }
-        };
+        init();
     </script>
+
 </body>
 
 </html>

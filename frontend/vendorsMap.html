@@ -1,203 +1,144 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Vendor Locator – Ashok Rajpath</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sewa Setu - Pin Location</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    #map {
+      flex: 1;
+    }
 
-<script type="module" src="firebase.js"></script>
-<script type="module" src="serviceSlots.js"></script>
+    .controls {
+      padding: 20px;
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
 
-<style>
-body { font-family: Arial; background:#f5f5f5; padding:20px; }
-.card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-#map { width:100%; height:70vh; margin-bottom:10px; }
-</style>
+    button {
+      background: #34a853;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #ccc;
+    }
+
+    .info {
+      margin-bottom: 10px;
+      color: #555;
+    }
+  </style>
 </head>
 
 <body>
-<div class="card">
-  <h2 id="pageTitle">Vendor Locator – Ashok Rajpath</h2>
-  <div id="searchContainer">
-    <input id="searchBar" placeholder="Search vendor..." style="width:100%;padding:10px;margin-bottom:10px;"/>
-  </div>
+
   <div id="map"></div>
-  <div id="vendorDetails" style="font-size:14px;"></div>
-
-  <div id="selectionButtons">
-    <button onclick="window.clearSelection()">Remove Selected Location</button>
-    <button id="confirmBtn" onclick="window.confirmLocation()" style="display:none;background:#34a853;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
-      ✅ Confirm Selected Location
-    </button>
-    <button id="addVendorBtn" onclick="window.addVendor()" style="display:none;">Add Vendor at Selected Location</button>
+  <div class="controls">
+    <div class="info" id="statusMsg">Click on the map to select your shop location.</div>
+    <button id="confirmBtn" disabled>Confirm Location</button>
   </div>
-</div>
 
-<script type="module">
-import { db, addDoc, onSnapshot, collection } from "./firebase.js";
+  <script type="module" src="firebase.js"></script>
+  <script type="module">
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Check if we're in selection mode (for vendor registration)
-const urlParams = new URLSearchParams(window.location.search);
-const isSelectionMode = urlParams.get('select') === 'true';
+    let currentUser = null;
+    let selectedLat = null;
+    let selectedLng = null;
+    let marker = null;
 
-const map = L.map('map').setView([25.6207, 85.1724], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    // Map Init
+    const map = L.map('map').setView([25.6207, 85.1724], 14); // Patna Default
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-let selectedLat = null;
-let selectedLng = null;
-let selectionMarker = null;
+    // Click Handler
+    map.on('click', (e) => {
+      selectedLat = e.latlng.lat;
+      selectedLng = e.latlng.lng;
 
-// Update UI based on mode
-if (isSelectionMode) {
-  document.getElementById('pageTitle').textContent = 'Select Your Store Location';
-  document.getElementById('searchContainer').style.display = 'none';
-  document.getElementById('vendorDetails').style.display = 'none';
-  document.getElementById('confirmBtn').style.display = 'inline-block';
-  document.getElementById('addVendorBtn').style.display = 'none';
-} else {
-  document.getElementById('confirmBtn').style.display = 'none';
-  document.getElementById('addVendorBtn').style.display = 'inline-block';
-}
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([selectedLat, selectedLng]).addTo(map);
 
-// Single marker selection
-map.on("click", (e) => {
-  if (selectionMarker) map.removeLayer(selectionMarker);
-  selectedLat = e.latlng.lat;
-  selectedLng = e.latlng.lng;
-  selectionMarker = L.marker([selectedLat, selectedLng]).addTo(map)
-    .bindPopup("Location selected ✔").openPopup();
-  console.log("📍 Selected:", selectedLat, selectedLng);
-  
-  // Show confirmation message in selection mode
-  if (isSelectionMode) {
-    document.getElementById('vendorDetails').style.display = 'block';
-    document.getElementById('vendorDetails').innerHTML = `
-      <div style="background:#e8f5e9;padding:10px;border-radius:6px;margin-top:10px;">
-        <b>✅ Location Selected!</b><br/>
-        Latitude: ${selectedLat.toFixed(6)}<br/>
-        Longitude: ${selectedLng.toFixed(6)}<br/>
-        <small>Click "Confirm Selected Location" to use this location</small>
-      </div>
-    `;
-  }
-});
-
-// Remove selection manually
-window.clearSelection = function() {
-  if (selectionMarker) {
-    map.removeLayer(selectionMarker);
-    selectionMarker = null;
-    selectedLat = null;
-    selectedLng = null;
-    if (isSelectionMode) {
-      document.getElementById('vendorDetails').style.display = 'none';
-    }
-    console.log("Selection cleared ✔");
-  }
-};
-
-// Confirm location for vendor registration
-window.confirmLocation = function() {
-  if (!selectedLat || !selectedLng) {
-    alert("Please select a location on the map first ❌");
-    return;
-  }
-  
-  // Save coordinates to localStorage
-  localStorage.setItem('selectedVendorLocation', JSON.stringify({
-    lat: selectedLat,
-    lng: selectedLng
-  }));
-  
-  // Redirect back to vendor form
-  const returnUrl = localStorage.getItem('vendorFormReturnUrl') || 'vendors.html';
-  localStorage.removeItem('vendorFormReturnUrl');
-  window.location.href = returnUrl;
-};
-
-// Add vendor using selected coords
-window.addVendor = async function() {
-  if (!selectedLat || !selectedLng) {
-    alert("Select a location first ❌");
-    return;
-  }
-  try {
-    await addDoc(collection(db, "vendors"), {
-      name: "Co Shop Test",
-      category: "Books",
-      phone: "0000000000",
-      timings: "N/A",
-      lat: selectedLat,
-      lng: selectedLng,
-      createdAt: new Date()
+      document.getElementById("statusMsg").textContent = `Selected: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+      document.getElementById("confirmBtn").disabled = false;
     });
-    alert("Vendor added ✔");
-    console.log("Vendor written to Firestore ✔");
-  } catch (e) {
-    console.error("Vendor write failed ❌", e);
-  }
-};
 
-// Render vendor pins (skip in selection mode)
-let vendorMarkers = [];
-function clearVendorMarkers() {
-  vendorMarkers.forEach(m => map.removeLayer(m));
-  vendorMarkers = [];
-}
+    // Auth & Validity Check
+    function init() {
+      const interval = setInterval(() => {
+        if (window.auth && window.db) {
+          clearInterval(interval);
+          onAuthStateChanged(window.auth, async (user) => {
+            if (!user) {
+              window.location.href = "vendorPortal.html";
+              return;
+            }
+            currentUser = user;
 
-// Only load vendors if not in selection mode
-if (!isSelectionMode) {
-  onSnapshot(collection(db, "vendors"), (snap) => {
-  clearVendorMarkers();
-  snap.forEach(d => {
-    const v = d.data();
-    if (!v.lat || !v.lng) {
-      console.warn("Skipping vendor (missing coords):", d.id, v);
-      return;
+            // Critical Security Pre-check
+            try {
+              const snap = await getDoc(doc(window.db, "vendors", user.uid));
+              if (!snap.exists()) {
+                alert("Profile not found. Please register first.");
+                window.location.href = "vendors.html";
+              }
+            } catch (e) {
+              console.error(e);
+              alert("Error validating session.");
+            }
+          });
+        }
+      }, 100);
     }
-    const m = L.marker([v.lat, v.lng]).addTo(map);
-    m.vendorData = v; // attach data for search filtering
-    m.on("click", () => {
-      document.getElementById("vendorDetails").innerHTML = `
-        <b>${v.name ?? "N/A"}</b><br/>
-        Category: ${v.category ?? "N/A"}<br/>
-        Phone: ${v.phone ?? "N/A"}<br/>
-        Timings: ${v.timings ?? "N/A"}
-      `;
-    });
-    vendorMarkers.push(m);
-  });
-  });
 
-  // Search filter pins instantly
-  document.getElementById("searchBar").addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase();
-    vendorMarkers.forEach(m => {
-      const name = m.vendorData?.name?.toLowerCase() || "";
-      m.setOpacity(name.includes(term) ? 1 : 0);
-    });
-  });
-}
+    // Save Logic
+    document.getElementById("confirmBtn").addEventListener("click", async () => {
+      if (!selectedLat || !selectedLng) return;
 
-// Test serviceSlots functions availability (skip in selection mode)
-if (!isSelectionMode) {
-  setTimeout(() => {
-    console.log("🧪 Testing serviceSlots functions...");
-    console.log("window.createSlot:", typeof window.createSlot, window.createSlot);
-    console.log("window.bookSlot:", typeof window.bookSlot, window.bookSlot);
-    console.log("window.flipExpiredSlots:", typeof window.flipExpiredSlots, window.flipExpiredSlots);
-    console.log("window.listenServiceSlots:", typeof window.listenServiceSlots, window.listenServiceSlots);
-    
-    if (window.createSlot && window.bookSlot && window.flipExpiredSlots) {
-      console.log("✅ All serviceSlots functions are available!");
-    } else {
-      console.error("❌ Some serviceSlots functions are missing!");
-    }
-  }, 1000); // Wait 1 second for modules to load
-}
-</script>
+      const btn = document.getElementById("confirmBtn");
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+
+      try {
+        await setDoc(doc(window.db, "vendors", currentUser.uid), {
+          lat: selectedLat,
+          lng: selectedLng,
+          status: "registered_and_located"
+        }, { merge: true });
+
+        alert("Location saved successfully!");
+        window.location.href = "vendors.html";
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save location.");
+        btn.disabled = false;
+        btn.textContent = "Confirm Location";
+      }
+    });
+
+    init();
+  </script>
+
 </body>
+
 </html>

@@ -53,7 +53,7 @@ At all times, exactly three roles exist:
 - Safe fallback if price/availability is missing
 
 ## 6) EXACT BUTTON-BY-BUTTON WORKFLOW
-*(This is the part judges care about)*
+
 
 ### A. Entry (index.html)
 **Buttons:**
